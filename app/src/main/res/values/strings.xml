@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Nosferatu Launcher</string>
     <string name="library_is_empty">Empty library</string>
+    <string name="button_sync">Sincronizza</string>
 </resources>

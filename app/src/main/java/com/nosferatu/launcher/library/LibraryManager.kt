@@ -1,6 +1,5 @@
-package com.nosferatu.launcher
+package com.nosferatu.launcher.library
 
-import com.nosferatu.launcher.library.LibraryScanner
 import com.nosferatu.launcher.repository.LibraryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

@@ -1,5 +1,6 @@
 package com.nosferatu.launcher.ui.adapter
 
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,6 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.nosferatu.launcher.R
+import com.nosferatu.launcher.ReaderActivity
 import com.nosferatu.launcher.data.EbookEntity
 
 class BookAdapter(
@@ -26,6 +28,13 @@ class BookAdapter(
             itemView.setOnClickListener { onBookClick(book) }
 
             coverImageView.setImageResource(R.drawable.ic_book_placeholder)
+            itemView.setOnClickListener {
+                val context = itemView.context
+                val intent = Intent(context, ReaderActivity::class.java).apply {
+                    putExtra("FILE_PATH", book.filePath)
+                }
+                context.startActivity(intent)
+            }
         }
     }
 
