@@ -1,17 +1,18 @@
 buildscript {
+    ext {
+        kotlin_version = '2.1.0'
+        // Proviamo questa versione specifica di KSP
+        ksp_version = '2.1.0-1.0.29'
+    }
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.3'
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        jcenter()
+        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Ora che abbiamo il portale nel settings, questo verrà trovato
+        classpath "com.google.devtools.ksp:symbol-processing-gradle-plugin:$ksp_version"
     }
 }
 

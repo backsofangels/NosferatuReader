@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nosferatu Launcher</string>
+    <string name="library_is_empty">Empty library</string>
+</resources>
