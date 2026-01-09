@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary_color">#e94560</color>
+    <color name="reader_bg_light">#FFFFFF</color>
+    <color name="reader_text_light">#333333</color>
+    <color name="reader_bg_dark">#1A1A1A</color>
+    <color name="reader_text_dark">#D1D1D1</color>
+</resources>

@@ -28,7 +28,7 @@ class BookParser {
             title = raw?.title ?: file.nameWithoutExtension,
             author = raw?.author,
             filePath = file.absolutePath,
-            coverPath = null,
+            coverData = null,
             format = format,
             lastModified = file.lastModified(),
             lastReadPosition = 0

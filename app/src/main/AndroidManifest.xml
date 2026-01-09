@@ -15,11 +15,10 @@
         <activity 
             android:name=".NosferatuLauncher"
             android:exported="true"
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:theme="@style/Theme.NosferatuLauncher"
             android:launchMode="singleInstance"
             android:stateNotNeeded="true"
-            android:excludeFromRecents="true"
-            android:screenOrientation="nosensor">
+            android:excludeFromRecents="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN" />
                 <!-- TODO: REMOVE -->
@@ -29,8 +28,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ReaderActivity"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-            android:launchMode="singleTop" />
+            android:name=".reader.native.ReaderActivityNative"
+            android:theme="@style/Theme.NosferatuLauncher"/>
     </application>
 </manifest>

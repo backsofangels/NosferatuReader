@@ -1,6 +1,6 @@
 package com.nosferatu.launcher.ui.adapter
 
-import android.content.Intent
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,7 +8,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.nosferatu.launcher.R
-import com.nosferatu.launcher.ReaderActivity
 import com.nosferatu.launcher.data.EbookEntity
 
 class BookAdapter(
@@ -25,15 +24,23 @@ class BookAdapter(
             titleTextView.text = book.title
             authorTextView.text = book.author ?: "Sconosciuto"
 
-            itemView.setOnClickListener { onBookClick(book) }
-
-            coverImageView.setImageResource(R.drawable.ic_book_placeholder)
-            itemView.setOnClickListener {
-                val context = itemView.context
-                val intent = Intent(context, ReaderActivity::class.java).apply {
-                    putExtra("FILE_PATH", book.filePath)
+            // --- LOGICA COPERTINA DINAMICA ---
+            if (book.coverData != null && book.coverData.isNotEmpty()) {
+                try {
+                    val bitmap = BitmapFactory.decodeByteArray(book.coverData, 0, book.coverData.size)
+                    coverImageView.setImageBitmap(bitmap)
+                } catch (e: Exception) {
+                    // Se la decodifica fallisce, usa il placeholder
+                    coverImageView.setImageResource(R.drawable.ic_book_placeholder)
                 }
-                context.startActivity(intent)
+            } else {
+                // Se non ci sono dati, usa il placeholder
+                coverImageView.setImageResource(R.drawable.ic_book_placeholder)
+            }
+
+            // --- GESTIONE CLICK ---
+            itemView.setOnClickListener {
+                onBookClick(book)
             }
         }
     }

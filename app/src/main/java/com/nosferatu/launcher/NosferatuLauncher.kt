@@ -20,6 +20,7 @@ import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryManager
 import com.nosferatu.launcher.library.LibraryScanner
 import com.nosferatu.launcher.parser.BookParser
+import com.nosferatu.launcher.reader.native.ReaderActivityNative
 import com.nosferatu.launcher.repository.LibraryRepository
 import com.nosferatu.launcher.ui.adapter.BookAdapter
 import kotlinx.coroutines.launch
@@ -137,7 +138,10 @@ class NosferatuLauncher : AppCompatActivity() {
     }
 
     private fun openBook(book: EbookEntity) {
-        Log.d(TAG, "Apertura libro: ${book.title} al percorso: ${book.filePath}")
+        val intent = Intent(this, ReaderActivityNative::class.java).apply {
+            putExtra("FILE_PATH", book.filePath)
+        }
+        startActivity(intent)
     }
 
     private fun showLoading(isLoading: Boolean) {

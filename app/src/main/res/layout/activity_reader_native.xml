@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/readerBackgroundColor">
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/measureContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="60dp"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/readerHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="15dp"
+        android:alpha="0.4"
+        android:textSize="12sp"
+        android:fontFamily="serif"
+        android:textColor="?attr/readerTextColor"
+        android:text="Frankenstein" />
+
+    <TextView
+        android:id="@+id/readerFooter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="15dp"
+        android:alpha="0.4"
+        android:textSize="12sp"
+        android:fontFamily="serif"
+        android:textColor="?attr/readerTextColor"
+        android:text="Pagina 0 di 0" />
+
+    <View
+        android:id="@+id/touchPrev"
+        android:layout_width="80dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true" />
+
+    <View
+        android:id="@+id/touchNext"
+        android:layout_width="80dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true" />
+
+    <View
+        android:id="@+id/touchCenter"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_toEndOf="@id/touchPrev"
+        android:layout_toStartOf="@id/touchNext" />
+
+    <LinearLayout
+        android:id="@+id/topControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:background="#E61A1A1A"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:gravity="end"
+        android:visibility="gone"
+        android:elevation="8dp">
+
+        <Button
+            android:id="@+id/btnChangeThemeTop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TEMA"
+            android:textSize="12sp"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/readerControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#E61A1A1A"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="20dp"
+        android:visibility="gone"
+        android:elevation="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="IMPOSTAZIONI LETTURA"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:alpha="0.7" />
+    </LinearLayout>
+
+</RelativeLayout>

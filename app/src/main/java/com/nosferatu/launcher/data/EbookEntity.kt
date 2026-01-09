@@ -11,6 +11,6 @@ data class EbookEntity(
     val filePath: String,
     val lastModified: Long,
     val format: String,
-    val coverPath: String? = null,
+    val coverData: ByteArray? = null,
     val lastReadPosition: Int = 0
 )

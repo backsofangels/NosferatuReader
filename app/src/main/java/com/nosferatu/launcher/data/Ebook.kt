@@ -5,7 +5,7 @@ data class Ebook(
     val title: String,
     val author: String?,
     val filePath: String,
-    val coverPath: String?,
+    val coverData: ByteArray?,
     val format: EbookFormat,
     val lastModified: Long,
     val lastReadPosition: Int = 0
@@ -16,7 +16,7 @@ data class Ebook(
             title = this.title,
             author = this.author,
             filePath = this.filePath,
-            coverPath = this.coverPath,
+            coverData = this.coverData,
             lastModified = lastModified,
             format = this.format.name,
             lastReadPosition = this.lastReadPosition
