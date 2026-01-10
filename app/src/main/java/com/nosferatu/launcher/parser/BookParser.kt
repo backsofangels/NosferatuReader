@@ -1,7 +1,9 @@
 package com.nosferatu.launcher.parser
 
+import android.util.Log
 import com.nosferatu.launcher.data.Ebook
 import com.nosferatu.launcher.data.EbookFormat
+import com.nosferatu.launcher.utils.EpubExtractor
 import java.io.File
 import java.util.UUID
 
@@ -23,12 +25,18 @@ class BookParser {
             }
         } else null
 
+        val coverBytes = if (format == EbookFormat.EPUB) {
+            val bytes = EpubExtractor.getBookCoverBytes(file.absolutePath)
+            Log.d("DEBUG_PARSER", "Cover per ${file.name}: ${bytes?.size ?: 0} bytes")
+            bytes
+        } else null
+
         return Ebook(
             id = UUID.nameUUIDFromBytes(file.absolutePath.toByteArray()).toString(),
             title = raw?.title ?: file.nameWithoutExtension,
             author = raw?.author,
             filePath = file.absolutePath,
-            coverData = null,
+            coverData = coverBytes,
             format = format,
             lastModified = file.lastModified(),
             lastReadPosition = 0

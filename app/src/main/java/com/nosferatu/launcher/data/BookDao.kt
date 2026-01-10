@@ -23,4 +23,7 @@ interface BookDao {
 
     @Query("UPDATE books SET lastReadPosition = :position WHERE id = :bookId")
     suspend fun updateReadPosition(bookId: String, position: Int)
+
+    @Query("UPDATE books SET lastChapterPosition = :chapter, lastReadPosition = :page WHERE filePath = :path")
+    suspend fun updateChapterAndPage(path: String, chapter: Int, page: Int)
 }

@@ -29,8 +29,7 @@
         android:alpha="0.4"
         android:textSize="12sp"
         android:fontFamily="serif"
-        android:textColor="?attr/readerTextColor"
-        android:text="Frankenstein" />
+        android:textColor="?attr/readerTextColor"/>
 
     <TextView
         android:id="@+id/readerFooter"
@@ -42,8 +41,7 @@
         android:alpha="0.4"
         android:textSize="12sp"
         android:fontFamily="serif"
-        android:textColor="?attr/readerTextColor"
-        android:text="Pagina 0 di 0" />
+        android:textColor="?attr/readerTextColor" />
 
     <View
         android:id="@+id/touchPrev"
@@ -71,19 +69,20 @@
         android:layout_alignParentTop="true"
         android:background="#E61A1A1A"
         android:orientation="horizontal"
-        android:padding="10dp"
+        android:padding="8dp"
         android:gravity="end"
         android:visibility="gone"
         android:elevation="8dp">
 
-        <Button
+        <ImageButton
             android:id="@+id/btnChangeThemeTop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="TEMA"
-            android:textSize="12sp"
-            style="@style/Widget.AppCompat.Button.Borderless"
-            android:textColor="#FFFFFF" />
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Cambia Tema"
+            android:src="@drawable/ic_theme_dark" />
     </LinearLayout>
 
     <LinearLayout

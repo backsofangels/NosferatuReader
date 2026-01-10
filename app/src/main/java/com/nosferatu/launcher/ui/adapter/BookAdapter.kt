@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.nosferatu.launcher.R
 import com.nosferatu.launcher.data.EbookEntity
@@ -16,29 +17,25 @@ class BookAdapter(
 ) : RecyclerView.Adapter<BookAdapter.BookViewHolder>() {
 
     inner class BookViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val coverImageView: ImageView = itemView.findViewById(R.id.imageViewCover)
-        private val titleTextView: TextView = itemView.findViewById(R.id.textViewTitle)
-        private val authorTextView: TextView = itemView.findViewById(R.id.textViewAuthor)
+        val coverImageView: ImageView = itemView.findViewById(R.id.imageViewCover)
+        val titleTextView: TextView = itemView.findViewById(R.id.textViewTitle)
+        val authorTextView: TextView = itemView.findViewById(R.id.textViewAuthor)
 
         fun bind(book: EbookEntity) {
             titleTextView.text = book.title
             authorTextView.text = book.author ?: "Sconosciuto"
 
-            // --- LOGICA COPERTINA DINAMICA ---
             if (book.coverData != null && book.coverData.isNotEmpty()) {
                 try {
                     val bitmap = BitmapFactory.decodeByteArray(book.coverData, 0, book.coverData.size)
                     coverImageView.setImageBitmap(bitmap)
                 } catch (e: Exception) {
-                    // Se la decodifica fallisce, usa il placeholder
                     coverImageView.setImageResource(R.drawable.ic_book_placeholder)
                 }
             } else {
-                // Se non ci sono dati, usa il placeholder
                 coverImageView.setImageResource(R.drawable.ic_book_placeholder)
             }
 
-            // --- GESTIONE CLICK ---
             itemView.setOnClickListener {
                 onBookClick(book)
             }
@@ -51,6 +48,11 @@ class BookAdapter(
         return BookViewHolder(view)
     }
 
+    override fun onViewRecycled(holder: BookViewHolder) {
+        super.onViewRecycled(holder)
+        holder.coverImageView.setImageDrawable(null)
+    }
+
     override fun onBindViewHolder(holder: BookViewHolder, position: Int) {
         holder.bind(books[position])
     }
@@ -58,7 +60,24 @@ class BookAdapter(
     override fun getItemCount() = books.size
 
     fun updateBooks(newBooks: List<EbookEntity>) {
+        val diffResult = DiffUtil.calculateDiff(BookDiffCallback(this.books, newBooks))
         this.books = newBooks
-        notifyDataSetChanged()
+        diffResult.dispatchUpdatesTo(this)
+    }
+
+    class BookDiffCallback(
+        private val oldList: List<EbookEntity>,
+        private val newList: List<EbookEntity>
+    ) : DiffUtil.Callback() {
+        override fun getOldListSize() = oldList.size
+        override fun getNewListSize() = newList.size
+
+        override fun areItemsTheSame(oldPos: Int, newPos: Int): Boolean {
+            return oldList[oldPos].id == newList[newPos].id
+        }
+
+        override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean {
+            return oldList[oldPos] == newList[newPos]
+        }
     }
 }

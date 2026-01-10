@@ -6,15 +6,19 @@ import android.os.Bundle
 import android.text.TextPaint
 import android.view.View
 import android.view.ViewTreeObserver
-import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton // Cambiato da Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.nosferatu.launcher.R
+import com.nosferatu.launcher.data.database.AppDatabase
 import com.nosferatu.launcher.utils.EpubExtractor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class ReaderActivityNative : AppCompatActivity() {
 
@@ -27,15 +31,16 @@ class ReaderActivityNative : AppCompatActivity() {
     private lateinit var readerHeader: TextView
     private lateinit var readerFooter: TextView
     private lateinit var rootLayout: View
+    private lateinit var btnChangeTheme: ImageButton // Cambiato da Button
 
     // State
     private var chapters: List<String> = emptyList()
     private var currentChapterIndex = 0
     private var fontSizeSp = 18f
     private var isDarkMode = true
+    private var savedPageIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Carica la preferenza prima di creare la view per evitare il flash bianco
         loadThemePreference()
         setTheme(if (isDarkMode) R.style.Theme_NosferatuLauncher_Dark else R.style.Theme_NosferatuLauncher)
 
@@ -47,37 +52,45 @@ class ReaderActivityNative : AppCompatActivity() {
         loadInitialData()
     }
 
+    override fun onPause() {
+        super.onPause()
+        saveProgress()
+    }
+
+    private fun saveProgress() {
+        val filePath = intent.getStringExtra("FILE_PATH") ?: return
+        val currentPos = viewPager.currentItem
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@ReaderActivityNative)
+            db.bookDao().updateChapterAndPage(filePath, currentChapterIndex, currentPos)
+        }
+    }
+
     private fun initViews() {
         rootLayout = findViewById(R.id.mainRoot)
         viewPager = findViewById(R.id.viewPager)
         measureContainer = findViewById(R.id.measureContainer)
-
-        // Barre di controllo (Top e Bottom)
         topControls = findViewById(R.id.topControls)
         readerControls = findViewById(R.id.readerControls)
-
         readerHeader = findViewById(R.id.readerHeader)
         readerFooter = findViewById(R.id.readerFooter)
+        btnChangeTheme = findViewById(R.id.btnChangeThemeTop) // Inizializzato come ImageButton
 
         adapter = BookPageAdapter(emptyList())
         viewPager.adapter = adapter
 
-        // Sincronizza i colori iniziali dell'interfaccia statica
         syncInterfaceColors()
     }
 
     private fun setupListeners() {
-        // Navigazione tramite Tap laterali
         findViewById<View>(R.id.touchNext).setOnClickListener { navigateNext() }
         findViewById<View>(R.id.touchPrev).setOnClickListener { navigatePrevious() }
-
-        // Menu Opzioni tramite zona centrale
         findViewById<View>(R.id.touchCenter).setOnClickListener { toggleControls() }
 
-        // Tasto cambio tema nella barra superiore (Kobo style)
-        findViewById<Button>(R.id.btnChangeThemeTop).setOnClickListener { toggleTheme() }
+        // Listener per l'ImageButton
+        btnChangeTheme.setOnClickListener { toggleTheme() }
 
-        // Listener per aggiornare il numero di pagina nel footer
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 updateFooter(position)
@@ -88,27 +101,30 @@ class ReaderActivityNative : AppCompatActivity() {
     private fun loadInitialData() {
         val filePath = intent.getStringExtra("FILE_PATH") ?: return
 
-        // Imposta il titolo reale del libro nell'header
+        currentChapterIndex = intent.getIntExtra("LAST_CHAPTER", 0)
+        savedPageIndex = intent.getIntExtra("LAST_POSITION", 0)
+
         val bookTitle = EpubExtractor.getBookTitle(filePath)
         readerHeader.text = bookTitle ?: "Documento senza titolo"
 
-        // Carica i capitoli usando la logica ZIP ripristinata
         chapters = EpubExtractor.getAllChapters(filePath)
 
         if (chapters.isNotEmpty()) {
             measureContainer.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
                     measureContainer.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    loadChapter(currentChapterIndex, goToLastPage = false)
+                    loadChapter(currentChapterIndex, goToSavedPage = true)
                 }
             })
         }
     }
 
-    private fun loadChapter(index: Int, goToLastPage: Boolean) {
+    private fun loadChapter(index: Int, goToLastPage: Boolean = false, goToSavedPage: Boolean = false) {
         if (index !in chapters.indices) return
 
+        currentChapterIndex = index
         val chapterHtml = chapters[index]
+
         val paint = TextPaint().apply {
             textSize = fontSizeSp * resources.displayMetrics.scaledDensity
             typeface = Typeface.SERIF
@@ -124,19 +140,23 @@ class ReaderActivityNative : AppCompatActivity() {
         )
 
         adapter.updateData(pages)
-        viewPager.setCurrentItem(if (goToLastPage) pages.size - 1 else 0, false)
+
+        val targetPage = when {
+            goToSavedPage -> savedPageIndex.coerceIn(0, pages.size - 1)
+            goToLastPage -> pages.size - 1
+            else -> 0
+        }
+
+        viewPager.setCurrentItem(targetPage, false)
         updateFooter(viewPager.currentItem)
     }
-
-    // --- LOGICA DI NAVIGAZIONE ---
 
     private fun navigateNext() {
         val currentPos = viewPager.currentItem
         if (currentPos < adapter.itemCount - 1) {
             viewPager.setCurrentItem(currentPos + 1, true)
         } else if (currentChapterIndex < chapters.size - 1) {
-            currentChapterIndex++
-            loadChapter(currentChapterIndex, goToLastPage = false)
+            loadChapter(currentChapterIndex + 1, goToLastPage = false)
         }
     }
 
@@ -145,22 +165,14 @@ class ReaderActivityNative : AppCompatActivity() {
         if (currentPos > 0) {
             viewPager.setCurrentItem(currentPos - 1, true)
         } else if (currentChapterIndex > 0) {
-            currentChapterIndex--
-            loadChapter(currentChapterIndex, goToLastPage = true)
+            loadChapter(currentChapterIndex - 1, goToLastPage = true)
         }
     }
 
-    // --- UI & THEME MANAGEMENT ---
-
     private fun toggleControls() {
         val isVisible = topControls.visibility == View.VISIBLE
-        if (isVisible) {
-            hideControlView(topControls)
-            hideControlView(readerControls)
-        } else {
-            showControlView(topControls)
-            showControlView(readerControls)
-        }
+        if (isVisible) hideControlView(topControls).also { hideControlView(readerControls) }
+        else showControlView(topControls).also { showControlView(readerControls) }
     }
 
     private fun showControlView(view: View) {
@@ -182,15 +194,14 @@ class ReaderActivityNative : AppCompatActivity() {
         // Applica il tema all'activity
         setTheme(if (isDarkMode) R.style.Theme_NosferatuLauncher_Dark else R.style.Theme_NosferatuLauncher)
 
-        // Sincronizza colori UI statica
+        // Sincronizza i colori e l'icona
         syncInterfaceColors()
 
-        // Refresh adapter per ricolorare le pagine caricate nel ViewPager
+        // Refresh adapter per applicare i colori al testo delle pagine
         viewPager.adapter = adapter
-        val currentPos = viewPager.currentItem
-        viewPager.setCurrentItem(currentPos, false)
+        viewPager.setCurrentItem(viewPager.currentItem, false)
 
-        // Chiudi le barre dopo il cambio
+        // Nasconde i controlli dopo il cambio
         toggleControls()
     }
 
@@ -201,6 +212,15 @@ class ReaderActivityNative : AppCompatActivity() {
         rootLayout.setBackgroundColor(bgColor)
         readerHeader.setTextColor(textColor)
         readerFooter.setTextColor(textColor)
+
+        // Cambio dinamico dell'icona:
+        // Se siamo in Dark Mode, mostriamo il SOLE per passare al Light
+        // Se siamo in Light Mode, mostriamo la LUNA per passare al Dark
+        if (isDarkMode) {
+            btnChangeTheme.setImageResource(R.drawable.ic_theme_light)
+        } else {
+            btnChangeTheme.setImageResource(R.drawable.ic_theme_dark)
+        }
     }
 
     private fun updateFooter(position: Int) {
@@ -208,20 +228,16 @@ class ReaderActivityNative : AppCompatActivity() {
         readerFooter.text = "Pagina ${position + 1} di $totalPages"
     }
 
-    // --- PERSISTENZA ---
-
     private fun saveThemePreference(dark: Boolean) {
-        val sharedPref = getSharedPreferences("ReaderSettings", Context.MODE_PRIVATE)
-        sharedPref.edit().putBoolean("DARK_MODE", dark).apply()
+        getSharedPreferences("ReaderSettings", Context.MODE_PRIVATE).edit().putBoolean("DARK_MODE", dark).apply()
     }
 
     private fun loadThemePreference() {
-        val sharedPref = getSharedPreferences("ReaderSettings", Context.MODE_PRIVATE)
-        isDarkMode = sharedPref.getBoolean("DARK_MODE", true)
+        isDarkMode = getSharedPreferences("ReaderSettings", Context.MODE_PRIVATE).getBoolean("DARK_MODE", true)
     }
 
     fun changeFontSize(delta: Float) {
         fontSizeSp += delta
-        loadChapter(currentChapterIndex, goToLastPage = false)
+        loadChapter(currentChapterIndex)
     }
 }

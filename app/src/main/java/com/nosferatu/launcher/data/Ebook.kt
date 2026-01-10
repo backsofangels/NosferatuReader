@@ -8,7 +8,8 @@ data class Ebook(
     val coverData: ByteArray?,
     val format: EbookFormat,
     val lastModified: Long,
-    val lastReadPosition: Int = 0
+    val lastReadPosition: Int = 0,
+    val lastChapterPosition: Int = 0
 ) {
     fun toEntity(lastModified: Long): EbookEntity {
         return EbookEntity(
@@ -19,7 +20,8 @@ data class Ebook(
             coverData = this.coverData,
             lastModified = lastModified,
             format = this.format.name,
-            lastReadPosition = this.lastReadPosition
+            lastReadPosition = this.lastReadPosition,
+            lastChapterPosition = this.lastChapterPosition
         )
     }
 }

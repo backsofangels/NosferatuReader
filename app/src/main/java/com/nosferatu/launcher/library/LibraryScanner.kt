@@ -22,6 +22,7 @@ class LibraryScanner(val parser: BookParser) {
         return listOf("epub", "pdf", "cbz").contains(extension.lowercase())
     }
 
+    /*
     suspend fun quickScan(): List<Ebook> = withContext(Dispatchers.IO) {
         val root = File(LibraryConfig.rootPath)
 
@@ -39,4 +40,5 @@ class LibraryScanner(val parser: BookParser) {
             }
         }.awaitAll().filterNotNull()
     }
+    */
 }

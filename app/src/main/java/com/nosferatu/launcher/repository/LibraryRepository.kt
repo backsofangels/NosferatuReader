@@ -1,7 +1,7 @@
 package com.nosferatu.launcher.repository
 
 import android.content.Context
-import com.nosferatu.launcher.data.AppDatabase
+import com.nosferatu.launcher.data.database.AppDatabase
 import com.nosferatu.launcher.data.Ebook
 import com.nosferatu.launcher.data.EbookEntity
 

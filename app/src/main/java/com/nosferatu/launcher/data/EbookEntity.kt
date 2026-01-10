@@ -12,5 +12,6 @@ data class EbookEntity(
     val lastModified: Long,
     val format: String,
     val coverData: ByteArray? = null,
-    val lastReadPosition: Int = 0
+    val lastReadPosition: Int = 0,
+    val lastChapterPosition: Int = 0
 )

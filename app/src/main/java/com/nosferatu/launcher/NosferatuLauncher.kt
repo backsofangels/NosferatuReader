@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ProgressBar
@@ -15,7 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.nosferatu.launcher.data.AppDatabase
+import com.nosferatu.launcher.data.database.AppDatabase
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryManager
 import com.nosferatu.launcher.library.LibraryScanner
@@ -55,10 +54,11 @@ class NosferatuLauncher : AppCompatActivity() {
         setupRecyclerView()
         updateClock()
 
+        // Gestione permessi e caricamento iniziale
         if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), 1)
         } else {
-            loadAndDisplayBooks()
+            loadAndDisplayBooks(forceSync = false)
         }
     }
 
@@ -66,7 +66,10 @@ class NosferatuLauncher : AppCompatActivity() {
         super.onResume()
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         updateClock()
-        loadAndDisplayBooks()
+
+        // Fondamentale: ricarica i libri dal DB quando torni dal Reader
+        // per aggiornare i segnalibri nell'Adapter
+        loadAndDisplayBooks(forceSync = false)
     }
 
     override fun onPause() {
@@ -74,12 +77,8 @@ class NosferatuLauncher : AppCompatActivity() {
         unregisterReceiver(batteryReceiver)
     }
 
-
-
     private fun setupDependencies() {
         val database = AppDatabase.getDatabase(this)
-        val bookDao = database.bookDao()
-
         val bookParser = BookParser()
         val scanner = LibraryScanner(bookParser)
 
@@ -95,7 +94,8 @@ class NosferatuLauncher : AppCompatActivity() {
         textViewClock = findViewById(R.id.textViewClock)
 
         buttonSync.setOnClickListener {
-            loadAndDisplayBooks()
+            // Qui forziamo la scansione dei file
+            loadAndDisplayBooks(forceSync = true)
         }
     }
 
@@ -112,12 +112,16 @@ class NosferatuLauncher : AppCompatActivity() {
         recyclerView.adapter = bookAdapter
     }
 
-    private fun loadAndDisplayBooks() {
+    private fun loadAndDisplayBooks(forceSync: Boolean) {
         lifecycleScope.launch {
-            showLoading(true)
+            if (forceSync) showLoading(true)
 
-            libraryManager.syncLibrary()
+            // Eseguiamo il sync solo se richiesto (es. tasto sync)
+            if (forceSync) {
+                libraryManager.syncLibrary()
+            }
 
+            // Recuperiamo i dati (con gli ultimi progressi salvati)
             val allBooks = libraryRepository.getAllBooks()
 
             showLoading(false)
@@ -129,10 +133,11 @@ class NosferatuLauncher : AppCompatActivity() {
         if (books.isEmpty()) {
             recyclerView.visibility = View.GONE
             statusTextView.visibility = View.VISIBLE
-            statusTextView.text = "Library is empty"
+            statusTextView.text = "La libreria è vuota"
         } else {
             recyclerView.visibility = View.VISIBLE
             statusTextView.visibility = View.GONE
+            // DiffUtil gestirà l'aggiornamento fluido dei segnalibri
             bookAdapter.updateBooks(books)
         }
     }
@@ -140,6 +145,9 @@ class NosferatuLauncher : AppCompatActivity() {
     private fun openBook(book: EbookEntity) {
         val intent = Intent(this, ReaderActivityNative::class.java).apply {
             putExtra("FILE_PATH", book.filePath)
+            // Passaggio dei dati salvati nel DB
+            putExtra("LAST_CHAPTER", book.lastChapterPosition)
+            putExtra("LAST_POSITION", book.lastReadPosition)
         }
         startActivity(intent)
     }
