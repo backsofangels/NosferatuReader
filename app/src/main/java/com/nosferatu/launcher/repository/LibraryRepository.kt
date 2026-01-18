@@ -1,6 +1,8 @@
 package com.nosferatu.launcher.repository
 
+import android.net.Uri
 import android.util.Log
+import androidx.documentfile.provider.DocumentFile
 import com.nosferatu.launcher.data.BookDao
 import com.nosferatu.launcher.library.CoverManager
 import com.nosferatu.launcher.library.LibraryConfig
@@ -18,11 +20,6 @@ class LibraryRepository(
     private val _tag = "LibraryRepository"
 
     suspend fun syncLibrary() = withContext(Dispatchers.IO) {
-        if (!libraryConfig.hasStoragePermission()) {
-            Log.e(_tag, "Storage permission not granted")
-            return@withContext
-        }
-
         val rootDirectory = libraryConfig.getRootDirectory()
 
         if (!rootDirectory.exists() || !rootDirectory.isDirectory) {
@@ -31,6 +28,8 @@ class LibraryRepository(
         }
 
         val filesOnDisk = scanner.scanDirectory(rootDirectory)
+
+        Log.d(_tag, "Root: ${rootDirectory.absolutePath} - Esiste: ${rootDirectory.exists()} - Leggibile: ${rootDirectory.canRead()}")
 
         // Add books/update books
         filesOnDisk.forEach { file ->

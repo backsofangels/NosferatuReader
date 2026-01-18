@@ -19,36 +19,47 @@ class LibraryViewModel(
     val uiState: StateFlow<LibraryUiState> = _uiState
 
     init {
-        scanBooks()
         observeBooks()
-        _uiState.value.books.forEach {
-            Log.d(_tag, "Book: ${it.title}")
-        }
     }
 
     private fun observeBooks() {
         viewModelScope.launch {
             repository.allBooks.collect {
                 _uiState.update { state ->
+                    Log.d(_tag, "Got ${state.books.size} books from db")
                     state.copy(books = it)
                 }
             }
         }
     }
 
+    fun onPermissionGranted() {
+        if (_uiState.value.books.isEmpty()) {
+            scanBooks()
+        }
+    }
+
     fun scanBooks() {
-        if (_uiState.value.isScanning) return
+        Log.d(_tag, "Scanning books")
+
+        if (_uiState.value.isScanning) {
+            Log.d(_tag, "Already scanning")
+            return
+        }
 
         viewModelScope.launch {
-
             _uiState.update {
                 it.copy(isScanning = true)
             }
-
-            repository.syncLibrary()
-
-            _uiState.update {
-                it.copy(isScanning = false)
+            try {
+                repository.syncLibrary()
+                Log.d(_tag, "Library synced successfully")
+            } catch (e: Exception) {
+                Log.e(_tag, "Error syncing library", e)
+            } finally {
+                _uiState.update {
+                    it.copy(isScanning = false)
+                }
             }
         }
     }

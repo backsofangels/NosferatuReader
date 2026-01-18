@@ -10,7 +10,9 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
@@ -36,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -44,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -66,7 +70,6 @@ class MainActivity: AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkStoragePermissions()
 
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
@@ -75,15 +78,35 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
-    private fun checkStoragePermissions() {
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
-        }
-    }
-
     @Composable
     fun MainScreen(viewModel: LibraryViewModel) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val context = LocalContext.current
+
+        var hasPermission by remember {
+            mutableStateOf(
+                context.checkSelfPermission(
+                    Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+            )
+        }
+
+        val permissionRequestor = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) {
+            isGranted ->
+                hasPermission = isGranted
+                if (isGranted) Log.d(_tag, "Permission granted")
+        }
+
+
+        LaunchedEffect(hasPermission) {
+            if (hasPermission) {
+                Log.d(_tag, "Refreshing library since permission is present")
+                viewModel.scanBooks()
+            } else {
+                permissionRequestor.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+        }
 
         Scaffold(
             topBar = { NosferatuTopBar() },
@@ -91,7 +114,7 @@ class MainActivity: AppCompatActivity() {
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
                 if (uiState.isScanning) {
-                    Toast.makeText(this@MainActivity, "Scanning library...", Toast.LENGTH_LONG).show()
+                    Log.d(_tag, "Scanning library")
                 }
 
                 if (uiState.error != null) {
