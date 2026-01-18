@@ -1,40 +1,64 @@
 package com.nosferatu.launcher.repository
 
-import android.content.Context
-import com.nosferatu.launcher.data.database.AppDatabase
-import com.nosferatu.launcher.data.Ebook
-import com.nosferatu.launcher.data.EbookEntity
+import android.util.Log
+import com.nosferatu.launcher.data.BookDao
+import com.nosferatu.launcher.library.CoverManager
+import com.nosferatu.launcher.library.LibraryConfig
+import com.nosferatu.launcher.library.LibraryScanner
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+class LibraryRepository(
+    private val bookDao: BookDao,
+    private val scanner: LibraryScanner,
+    private val coverManager: CoverManager,
+    private val libraryConfig: LibraryConfig
+) {
+    val allBooks = bookDao.getAllBooksFlow()
+    private val _tag = "LibraryRepository"
 
-class LibraryRepository(context: Context) {
-    private val db = AppDatabase.getDatabase(context)
-    private val bookDao = db.bookDao()
+    suspend fun syncLibrary() = withContext(Dispatchers.IO) {
+        if (!libraryConfig.hasStoragePermission()) {
+            Log.e(_tag, "Storage permission not granted")
+            return@withContext
+        }
 
-    suspend fun upsertBook(ebook: EbookEntity) {
-        bookDao.saveOrUpdate(ebook)
-    }
+        val rootDirectory = libraryConfig.getRootDirectory()
 
-    suspend fun saveOrUpdate(ebook: Ebook) {
-        val entity = ebook.toEntity(ebook.lastModified)
-        bookDao.saveOrUpdate(entity)
-    }
+        if (!rootDirectory.exists() || !rootDirectory.isDirectory) {
+            Log.e(_tag, "Root directory does not exist or is not a directory")
+            return@withContext
+        }
 
-    suspend fun needsUpdate(filePath: String, lastModified: Long): Boolean {
-        val lastModification = bookDao.getLastModified(filePath)
-        return if (lastModification != null) {
-            lastModification < lastModified
-        } else true
-    }
+        val filesOnDisk = scanner.scanDirectory(rootDirectory)
 
-    suspend fun getAllFilePaths(): List<String> {
-        return bookDao.getAllFilePaths()
-    }
+        // Add books/update books
+        filesOnDisk.forEach { file ->
+            Log.d(_tag, "Processing file: ${file.absolutePath}")
+            val existingBook = bookDao.getBookByPath(file.absolutePath)
 
-    suspend fun getAllBooks(): List<EbookEntity> {
-        return bookDao.getAllBooks()
-    }
+            if (existingBook == null || existingBook.lastModified != file.lastModified()) {
+                val metadata = scanner.extractMetadata(file) ?: return@forEach
 
-    suspend fun deleteByFilePaths(filePaths: List<String>) {
-        bookDao.deleteByFilePaths(filePaths)
+                val entity = metadata.toEntity(
+                    lastModified = file.lastModified(),
+                    coverPath = null
+                )
+
+                bookDao.insertBook(entity)
+
+                val coverPath = coverManager.saveCover(entity.id, metadata.coverImage)
+
+                bookDao.updateCoverPath(entity.id, coverPath)
+            }
+        }
+
+        val pathsInDb = bookDao.getAllFilePaths()
+        val pathsOnDisk = filesOnDisk.map { it.absolutePath }.toSet()
+        val orphans = pathsInDb.filterNot { it in pathsOnDisk }
+
+        if (orphans.isNotEmpty()) {
+            bookDao.deleteByPaths(orphans)
+        }
     }
 }

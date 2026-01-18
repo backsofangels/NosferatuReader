@@ -1,41 +1,37 @@
 package com.nosferatu.launcher.data
 
 data class Ebook(
-    val id: String,
     val title: String,
     val author: String?,
     val filePath: String,
-    val coverData: ByteArray?,
     val format: EbookFormat,
-    val lastModified: Long,
-    val lastReadPosition: Int = 0,
-    val lastChapterPosition: Int = 0
+    val coverImage: CoverImage? = null
 ) {
-    fun toEntity(lastModified: Long): EbookEntity {
+    fun toEntity(lastModified: Long, coverPath: String?): EbookEntity {
         return EbookEntity(
-            id = this.id,
             title = this.title,
             author = this.author,
             filePath = this.filePath,
-            coverData = this.coverData,
             lastModified = lastModified,
             format = this.format.name,
-            lastReadPosition = this.lastReadPosition,
-            lastChapterPosition = this.lastChapterPosition
+            coverPath = coverPath,
+            lastLocationJson = null,
+            progression = 0.0
         )
     }
 }
 
+class CoverImage(val data: ByteArray)
 
 enum class EbookFormat {
-    EPUB, PDF;
+    EPUB, PDF, CBZ;
+
     companion object {
-        fun fromExtension(extension: String): EbookFormat? {
-            return when (extension.lowercase()) {
-                "epub" -> EPUB
-                "pdf" -> PDF
-                else -> null
-            }
+        fun fromExtension(extension: String): EbookFormat = when (extension.lowercase()) {
+            "epub" -> EPUB
+            "pdf" -> PDF
+            "cbz" -> CBZ
+            else -> throw IllegalArgumentException("Extension not supported: $extension")
         }
     }
 }

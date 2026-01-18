@@ -1,45 +1,50 @@
 package com.nosferatu.launcher.parser
 
 import android.util.Log
+import com.nosferatu.launcher.data.CoverImage
 import com.nosferatu.launcher.data.Ebook
 import com.nosferatu.launcher.data.EbookFormat
-import com.nosferatu.launcher.utils.EpubExtractor
 import java.io.File
-import java.util.UUID
 
-class BookParser {
-    private val strategies: Map<EbookFormat, ParserStrategy> = mapOf(
-        EbookFormat.EPUB to EpubParser()
-        // TODO: EbookFormat.PDF to PdfParser()
-    )
+class BookParser(
+    private val strategies: Map<EbookFormat, ParserStrategy>
+) {
+    private val _tag = "BookParser"
+    val supportedFormats: Set<EbookFormat> = strategies.keys
 
     suspend fun parseMetadata(file: File): Ebook {
-        val format = EbookFormat.fromExtension(file.extension) ?: EbookFormat.EPUB
-        val strategy = strategies[format]
+        Log.d(_tag, "Parsing metadata for file: ${file.absolutePath}")
+        val extension = file.extension
+        val format = EbookFormat.fromExtension(extension)
+        Log.d(_tag, "Detected format: $format for extension: $extension")
 
-        val raw = if (strategy != null) {
-            try {
-                strategy.parse(file)
-            } catch (e: Exception) {
-                null
-            }
-        } else null
+        val strategy = strategies[format] ?: run {
+            Log.w(_tag, "No strategy found for format: $format. Returning default ebook.")
+            return Ebook(
+                title = file.nameWithoutExtension,
+                author = "Formato non supportato",
+                filePath = file.absolutePath,
+                format = format, // Defaulting to EPUB if extension is unknown
+                coverImage = null
+            )
+        }
 
-        val coverBytes = if (format == EbookFormat.EPUB) {
-            val bytes = EpubExtractor.getBookCoverBytes(file.absolutePath)
-            Log.d("DEBUG_PARSER", "Cover per ${file.name}: ${bytes?.size ?: 0} bytes")
-            bytes
-        } else null
+        val raw = try {
+            Log.d(_tag, "Using strategy: ${strategy.javaClass.simpleName}")
+            strategy.parse(file)
+        } catch (e: Exception) {
+            Log.e(_tag, "Error during parsing with strategy ${strategy.javaClass.simpleName}: ${file.absolutePath}", e)
+            null
+        }
 
-        return Ebook(
-            id = UUID.nameUUIDFromBytes(file.absolutePath.toByteArray()).toString(),
+        val ebook = Ebook(
             title = raw?.title ?: file.nameWithoutExtension,
-            author = raw?.author,
+            author = raw?.author ?: "Autore Sconosciuto",
             filePath = file.absolutePath,
-            coverData = coverBytes,
             format = format,
-            lastModified = file.lastModified(),
-            lastReadPosition = 0
+            coverImage = raw?.coverData?.let { CoverImage(it) }
         )
+        Log.d(_tag, "Successfully created Ebook object: ${ebook.title} by ${ebook.author}")
+        return ebook
     }
 }
