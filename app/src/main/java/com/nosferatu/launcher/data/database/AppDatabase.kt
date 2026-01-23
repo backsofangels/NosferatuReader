@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.nosferatu.launcher.data.BookDao
 import com.nosferatu.launcher.data.EbookEntity
 
-@Database(entities = [EbookEntity::class], version = 2, exportSchema = false)
+@Database(entities = [EbookEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
 
@@ -21,7 +21,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "nosferatu_library.db"
-                ).fallbackToDestructiveMigration().build()
+                )
+                    .fallbackToDestructiveMigration(true)
+                    .build()
                 INSTANCE = instance
                 instance
             }

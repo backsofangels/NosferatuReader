@@ -5,13 +5,13 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "books")
 data class EbookEntity(
-    @PrimaryKey val id: String,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
     val author: String?,
     val filePath: String,
     val lastModified: Long,
     val format: String,
-    val coverData: ByteArray? = null,
-    val lastReadPosition: Int = 0,
-    val lastChapterPosition: Int = 0
+    val coverPath: String? = null,
+    val lastLocationJson: String? = null,
+    val progression: Double = 0.0,
 )

@@ -1,29 +1,31 @@
-apply plugin: 'com.android.application'
-apply plugin: 'org.jetbrains.kotlin.android'
-apply plugin: 'com.google.devtools.ksp'
-
-
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
+}
 
 android {
     namespace 'com.nosferatu.launcher'
-    //noinspection GradleDependency
-    compileSdkVersion 34
+    compileSdkVersion 36
 
     defaultConfig {
         applicationId "com.nosferatu.launcher"
         minSdkVersion 25
-        //noinspection OldTargetApi
-        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
 
-        // Necessario per Room per esportare lo schema (opzionale ma consigliato)
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -31,8 +33,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            //noinspection ProguardAndroidTxtUsage
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -42,31 +43,47 @@ android {
 }
 
 dependencies {
-    // --- Metadata & Parsing ---
-    implementation('nl.siegmann.epublib:epublib-core:3.1') {
+    implementation(platform(libs.androidx.compose.bom))
+
+    implementation libs.androidx.runtime
+    implementation libs.lifecycle.runtime.compose
+    implementation libs.androidx.compose.material3
+
+    // Desugaring per supporto Java 8+ su vecchi dispositivi
+    coreLibraryDesugaring libs.android.desugar
+
+    // Metadata & Parsing
+    implementation(libs.epublib.core) {
         exclude group: 'org.slf4j'
         exclude group: 'xmlpull'
     }
+    implementation libs.slf4j.android
 
-    implementation('org.slf4j:slf4j-android:1.7.36')
+    // Readium Stack
+    implementation libs.readium.shared
+    implementation libs.readium.streamer
+    implementation libs.readium.navigator
+    implementation libs.readium.adapter.pdfium
 
-    // --- Database: Room (Sostituisce Exposed e SQLite-JDBC) ---
-    def room_version = "2.6.1"
-    //noinspection GradleDependency
-    implementation "androidx.room:room-runtime:$room_version"
-    //noinspection GradleDependency
-    implementation "androidx.room:room-ktx:$room_version"
-    ksp "androidx.room:room-compiler:$room_version"
+    // Database: Room
+    implementation libs.androidx.room.runtime
+    implementation libs.androidx.room.ktx
+    ksp libs.androidx.room.compiler
 
-    // --- UI & Lifecycle ---
-    //noinspection GradleDependency
-    implementation "androidx.recyclerview:recyclerview:1.3.2"
-    //noinspection GradleDependency
-    implementation "androidx.appcompat:appcompat:1.6.1"
-    //noinspection GradleDependency
-    implementation "com.google.android.material:material:1.11.0"
+    // UI & Lifecycle
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.appcompat
+    implementation libs.google.material
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.documentfile)
+    //implementation(libs.readium.streamer.parser.epub)
 
-    // --- Coroutines ---
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+    // Coroutines
+    implementation libs.kotlinx.coroutines.core
+    implementation libs.kotlinx.coroutines.android
 }
