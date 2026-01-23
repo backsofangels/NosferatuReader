@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/readerBackgroundColor">
+
+    <TextView
+        android:id="@+id/pageTextView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="40dp"
+        android:paddingEnd="40dp"
+        android:paddingTop="50dp"
+        android:paddingBottom="40dp"
+        android:textColor="?attr/readerTextColor"
+        android:textDirection="ltr"
+        android:textSize="18sp"
+        android:lineSpacingMultiplier="1.4"
+        android:fontFamily="serif"
+        android:includeFontPadding="false"
+        android:hyphenationFrequency="full"
+        android:breakStrategy="high_quality"
+        android:gravity="top" />
+</FrameLayout>

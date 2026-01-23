@@ -1,23 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.nosferatu.launcher"
-    android:sharedUserId="android.uid.system">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.nosferatu.launcher">
+    <!-- android:sharedUserId="android.uid.system" -->
 
-    <application android:allowBackup="false"
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="30"
+        tools:ignore="ScopedStorage" />
+
+    <application android:name=".NosferatuApp"
+        android:allowBackup="false"
         android:label="NosferatuOS"
+        android:requestLegacyExternalStorage="true"
         android:persistent="true">
         <activity 
-            android:name=".NosferatuLauncher"
-            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.NosferatuLauncher"
             android:launchMode="singleInstance"
             android:stateNotNeeded="true"
-            android:excludeFromRecents="true"
-            android:screenOrientation="nosensor">
+            android:excludeFromRecents="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
+                <!-- TODO: REMOVE -->
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- <category android:name="android.intent.category.HOME" /> -->
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".reader.ReaderActivity"
+            android:theme="@style/Theme.NosferatuLauncher"
+            android:exported="true" />
     </application>
 </manifest>

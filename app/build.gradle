@@ -1,17 +1,31 @@
-apply plugin: 'com.android.application'
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
+}
 
 android {
-    compileSdkVersion 30
+    namespace 'com.nosferatu.launcher'
+    compileSdkVersion 36
 
     defaultConfig {
         applicationId "com.nosferatu.launcher"
         minSdkVersion 25
-        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
+
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -19,10 +33,57 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
 }
 
 dependencies {
+    implementation(platform(libs.androidx.compose.bom))
+
+    implementation libs.androidx.runtime
+    implementation libs.lifecycle.runtime.compose
+    implementation libs.androidx.compose.material3
+
+    // Desugaring per supporto Java 8+ su vecchi dispositivi
+    coreLibraryDesugaring libs.android.desugar
+
+    // Metadata & Parsing
+    implementation(libs.epublib.core) {
+        exclude group: 'org.slf4j'
+        exclude group: 'xmlpull'
+    }
+    implementation libs.slf4j.android
+
+    // Readium Stack
+    implementation libs.readium.shared
+    implementation libs.readium.streamer
+    implementation libs.readium.navigator
+    implementation libs.readium.adapter.pdfium
+
+    // Database: Room
+    implementation libs.androidx.room.runtime
+    implementation libs.androidx.room.ktx
+    ksp libs.androidx.room.compiler
+
+    // UI & Lifecycle
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.appcompat
+    implementation libs.google.material
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.documentfile)
+    //implementation(libs.readium.streamer.parser.epub)
+
+    // Coroutines
+    implementation libs.kotlinx.coroutines.core
+    implementation libs.kotlinx.coroutines.android
 }
