@@ -60,4 +60,8 @@ class LibraryRepository(
             bookDao.deleteByPaths(orphans)
         }
     }
+
+    suspend fun updateBookPosition(bookId: Long, location: String, progression: Double) {
+        bookDao.updateReadingProgress(bookId, location, progression)
+    }
 }

@@ -14,6 +14,7 @@ documentfile = "1.1.0"
 
 # Libraries
 readium = "3.1.2"
+readiumStreamerParserEpub = "3.0.0"
 room = "2.8.4"
 coroutines = "1.10.2"
 desugar = "2.1.5"
@@ -32,6 +33,7 @@ material3 = "1.4.0"
 # Core & Utils
 android-desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 epublib-core = { group = "nl.siegmann.epublib", name = "epublib-core", version.ref = "epublib" }
+readium-streamer-parser-epub = { module = "org.readium.kotlin-toolkit:readium-streamer-parser-epub", version.ref = "readiumStreamerParserEpub" }
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4j" }
 
 # Readium Toolkit

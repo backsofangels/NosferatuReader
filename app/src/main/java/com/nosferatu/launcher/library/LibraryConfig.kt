@@ -35,6 +35,7 @@ class LibraryConfig(private val context: Context) {
         return dir
     }
 
+    //TODO: Can i remove it?
     fun hasStoragePermission(): Boolean {
         val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()

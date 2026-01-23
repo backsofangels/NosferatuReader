@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.androidx.documentfile)
+    //implementation(libs.readium.streamer.parser.epub)
 
     // Coroutines
     implementation libs.kotlinx.coroutines.core

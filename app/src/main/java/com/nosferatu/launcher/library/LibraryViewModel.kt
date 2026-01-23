@@ -1,13 +1,13 @@
-package com.nosferatu.launcher
+package com.nosferatu.launcher.library
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nosferatu.launcher.repository.LibraryRepository
 import com.nosferatu.launcher.ui.LibraryUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -33,9 +33,16 @@ class LibraryViewModel(
         }
     }
 
+    //TODO: Can i remove it?
     fun onPermissionGranted() {
         if (_uiState.value.books.isEmpty()) {
             scanBooks()
+        }
+    }
+
+    fun saveBookPosition(bookId: Long, location: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateBookPosition(bookId, location, 0.0)
         }
     }
 

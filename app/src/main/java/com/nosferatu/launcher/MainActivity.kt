@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -59,6 +60,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.nosferatu.launcher.data.EbookEntity
+import com.nosferatu.launcher.library.LibraryViewModel
+import com.nosferatu.launcher.library.LibraryViewModelFactory
+import com.nosferatu.launcher.reader.ReaderActivity
 import com.nosferatu.launcher.ui.LibraryUiState
 import java.io.File
 
@@ -124,8 +128,25 @@ class MainActivity: AppCompatActivity() {
                         modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
                     )
                 } else {
-                    LibraryGrid(state = uiState, onOpenBook = {
-                        Toast.makeText(this@MainActivity, "Opening book...", Toast.LENGTH_LONG).show()
+                    LibraryGrid(state = uiState, onOpenBook = { book ->
+                        val intent = Intent(this@MainActivity, ReaderActivity::class.java).apply {
+                            putExtra("BOOK_PATH", book.filePath)
+
+                            putExtra("LAST_LOCATION_JSON", book.lastLocationJson)
+
+                            putExtra("BOOK_ID", book.id)
+
+                            addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                        }
+
+                        startActivity(intent)
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            overridePendingTransition(0, 0)
+                        }
                     })
                 }
             }
