@@ -4,40 +4,79 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nosferatu.launcher.repository.LibraryRepository
-import com.nosferatu.launcher.ui.LibraryUiState
+import com.nosferatu.launcher.ui.states.LibraryUiState
+import com.nosferatu.launcher.data.EbookEntity
+import com.nosferatu.launcher.ui.ScreenSelectionTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class LibraryViewModel(
     private val repository: LibraryRepository
 ): ViewModel() {
     private val _tag = "LibraryViewModel"
-    private val _uiState = MutableStateFlow(LibraryUiState())
-    val uiState: StateFlow<LibraryUiState> = _uiState
+    private val _isScanning = MutableStateFlow(false)
+    private val _hasPermission = MutableStateFlow(false)
+    private val _booksFilterTab = MutableStateFlow<LibraryFilterTab>(LibraryFilterTab.All)
+    private val _screenSelectionTab = MutableStateFlow<ScreenSelectionTab>(ScreenSelectionTab.Home)
+    private val _error = MutableStateFlow<String?>(null)
 
-    init {
-        observeBooks()
-    }
+    private val _filteredBooks = combine(
+        repository.allBooks,
+        _booksFilterTab,
+        _hasPermission
+    ) { books, filter, permission ->
+        if (!permission) return@combine emptyList()
 
-    private fun observeBooks() {
-        viewModelScope.launch {
-            repository.allBooks.collect {
-                _uiState.update { state ->
-                    Log.d(_tag, "Got ${state.books.size} books from db")
-                    state.copy(books = it)
-                }
-            }
+        when (filter) {
+            LibraryFilterTab.All -> books.sortedByDescending { it.id }
+            LibraryFilterTab.Authors -> books.groupBy { it.author }.values.flatten().sortedByDescending { it.id }
+            //LibraryFilterTab.Series -> books.groupBy { it.series }.values.flatten().sortedByDescending { it.id }
+            //LibraryFilterTab.Collections -> books
+            else -> books
         }
     }
 
-    //TODO: Can i remove it?
-    fun onPermissionGranted() {
-        if (_uiState.value.books.isEmpty()) {
-            scanBooks()
+    val uiState: StateFlow<LibraryUiState> = combine(
+        _filteredBooks,
+        _isScanning,
+        _hasPermission,
+        _screenSelectionTab,
+        _error
+    ) { books, scanning, permission, screenSelectionTab, error ->
+
+        LibraryUiState(
+            books = books,
+            isScanning = scanning,
+            hasPermission = permission,
+            screenSelectionTab = screenSelectionTab,
+            error = error
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = LibraryUiState()
+    )
+
+    fun selectScreenTab(tab: ScreenSelectionTab) {
+        if (_screenSelectionTab.value == tab) return
+
+        _screenSelectionTab.value = tab
+        Log.d(_tag, "Switching to screen: ${tab.label}")
+
+        // Se vuoi che il passaggio a "Miei Libri" resetti sempre il filtro su "Tutti"
+        if (tab == ScreenSelectionTab.MyBooks) {
+            _booksFilterTab.value = LibraryFilterTab.All
         }
+    }
+
+    fun onPermissionResult(isGranted: Boolean) {
+        _hasPermission.value = isGranted
+        if (isGranted) scanBooks()
     }
 
     fun saveBookPosition(bookId: Long, location: String) {
@@ -46,27 +85,33 @@ class LibraryViewModel(
         }
     }
 
+    //To be used for debug of parser only, to be removed after
+    fun wipeAndScanBooks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteBooks()
+            scanBooks()
+        }
+    }
+
     fun scanBooks() {
         Log.d(_tag, "Scanning books")
 
-        if (_uiState.value.isScanning) {
+        if (_isScanning.value) {
             Log.d(_tag, "Already scanning")
             return
         }
 
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(isScanning = true)
-            }
+            _isScanning.value = true
+
             try {
                 repository.syncLibrary()
                 Log.d(_tag, "Library synced successfully")
             } catch (e: Exception) {
                 Log.e(_tag, "Error syncing library", e)
+                _error.value = e.toString()
             } finally {
-                _uiState.update {
-                    it.copy(isScanning = false)
-                }
+                _isScanning.value = false
             }
         }
     }

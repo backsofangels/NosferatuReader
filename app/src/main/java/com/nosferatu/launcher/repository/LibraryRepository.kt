@@ -38,17 +38,15 @@ class LibraryRepository(
 
             if (existingBook == null || existingBook.lastModified != file.lastModified()) {
                 val metadata = scanner.extractMetadata(file) ?: return@forEach
+                val coverPath = coverManager.saveCover(metadata.title, metadata.coverImage)
 
                 val entity = metadata.toEntity(
                     lastModified = file.lastModified(),
-                    coverPath = null
+                    coverPath = coverPath
                 )
 
                 bookDao.insertBook(entity)
-
-                val coverPath = coverManager.saveCover(entity.id, metadata.coverImage)
-
-                bookDao.updateCoverPath(entity.id, coverPath)
+                Log.d(_tag, "Cover saved at: $coverPath for book ${entity.id}")
             }
         }
 
@@ -63,5 +61,10 @@ class LibraryRepository(
 
     suspend fun updateBookPosition(bookId: Long, location: String, progression: Double) {
         bookDao.updateReadingProgress(bookId, location, progression)
+    }
+
+    suspend fun deleteBooks() {
+        Log.d(_tag, "Deleting all books")
+        bookDao.deleteBooks()
     }
 }

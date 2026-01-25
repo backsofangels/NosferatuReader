@@ -48,6 +48,9 @@ dependencies {
     implementation libs.androidx.runtime
     implementation libs.lifecycle.runtime.compose
     implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.foundation
+    implementation libs.androidx.navigation.runtime.ktx
+    implementation libs.androidx.compose.foundation.layout
 
     // Desugaring per supporto Java 8+ su vecchi dispositivi
     coreLibraryDesugaring libs.android.desugar
