@@ -5,9 +5,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
@@ -36,6 +39,7 @@ import com.nosferatu.launcher.ui.components.common.BottomBar
 import com.nosferatu.launcher.ui.components.common.TopBar
 import com.nosferatu.launcher.ui.screens.BooksScreen
 import com.nosferatu.launcher.ui.screens.HomeScreen
+import androidx.core.net.toUri
 
 class MainActivity: AppCompatActivity() {
     private val _tag: String = "MainActivity"
@@ -91,14 +95,47 @@ class MainActivity: AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        val isGranted = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ==
-                PackageManager.PERMISSION_GRANTED
+        val isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ logic
+            Environment.isExternalStorageManager()
+        } else {
+            // Android 10 and below logic
+            checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) ==
+                    PackageManager.PERMISSION_GRANTED
+        }
 
         viewModel.onPermissionResult(isGranted)
 
         if (!isGranted) {
-            storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Send user to the system settings page for your app
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        data = "package:${packageName}".toUri()
+                    }
+                    // Use a new launcher for result (see step 2)
+                    manageStorageLauncher.launch(intent)
+                } catch (e: Exception) {
+                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                    manageStorageLauncher.launch(intent)
+                }
+            } else {
+                // Traditional popup
+                storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
         }
+    }
+
+    private val manageStorageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        // When user returns from settings, re-run the check
+        val isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+        viewModel.onPermissionResult(isGranted)
     }
 
     private fun hideSystemUI() {

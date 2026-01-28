@@ -14,6 +14,9 @@ class LibraryScanner(private val parser: BookParser) {
         Log.d(_tag, "Supported formats: $formats")
 
         val files = directory.walkTopDown()
+            .onEnter { folder ->
+                !folder.name.startsWith(".") && folder.name != "Android"
+            }
             .maxDepth(2)
             .filter { it.isFile && it.extension.lowercase() in formats }
             .toList()
