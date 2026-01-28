@@ -12,6 +12,7 @@ android {
     defaultConfig {
         applicationId "com.nosferatu.launcher"
         minSdkVersion 25
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0"
 

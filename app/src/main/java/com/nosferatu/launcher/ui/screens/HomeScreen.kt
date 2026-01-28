@@ -12,17 +12,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nosferatu.launcher.data.EbookEntity
+import com.nosferatu.launcher.library.LibraryViewModel
 import com.nosferatu.launcher.ui.components.home.HomeReadingNowItem
+import com.nosferatu.launcher.ui.components.home.TopActionBar
 import com.nosferatu.launcher.ui.states.LibraryUiState
 
 @Composable
-fun HomeScreen(uiState: LibraryUiState, onOpenBook: (EbookEntity) -> Unit) {
+fun HomeScreen(
+    uiState: LibraryUiState,
+    onOpenBook: (EbookEntity) -> Unit,
+    onSyncClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .padding(16.dp)
     ) {
+        TopActionBar (
+            isScanning = uiState.isScanning,
+            onSyncClick = onSyncClick
+        )
         // Sezione "In Lettura" (I due libri in alto nell'immagine)
         Row(
             modifier = Modifier.fillMaxWidth(),

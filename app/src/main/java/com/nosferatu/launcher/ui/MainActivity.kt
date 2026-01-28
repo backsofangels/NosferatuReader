@@ -7,15 +7,15 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,8 +36,7 @@ import com.nosferatu.launcher.reader.ReaderActivity
 import com.nosferatu.launcher.ui.components.books.BooksFilterBar
 import com.nosferatu.launcher.ui.components.books.BooksScreenLibraryList
 import com.nosferatu.launcher.ui.components.common.BottomBar
-import com.nosferatu.launcher.ui.components.common.TopBar
-import com.nosferatu.launcher.ui.screens.BooksScreen
+import com.nosferatu.launcher.ui.components.common.CustomStatusBar
 import com.nosferatu.launcher.ui.screens.HomeScreen
 import androidx.core.net.toUri
 
@@ -67,7 +66,8 @@ class MainActivity: AppCompatActivity() {
 
             MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
                 Scaffold(
-                    topBar = { TopBar(viewModel, uiState.isScanning) }, // La tua TopBar
+                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    topBar = { CustomStatusBar() },
                     bottomBar = {
                         BottomBar(
                             selectedTab = uiState.screenSelectionTab,
@@ -79,7 +79,11 @@ class MainActivity: AppCompatActivity() {
                 ) { padding ->
                     Box(modifier = Modifier.padding(padding)) {
                         when (uiState.screenSelectionTab) {
-                            ScreenSelectionTab.Home -> HomeScreen(uiState, onOpenBook = { openBook(it) })
+                            ScreenSelectionTab.Home -> HomeScreen(
+                                uiState,
+                                onOpenBook = { openBook(it) },
+                                onSyncClick = { viewModel.scanBooks() }
+                            )
                             ScreenSelectionTab.MyBooks -> {
                                 Column {
                                     BooksFilterBar(uiState)

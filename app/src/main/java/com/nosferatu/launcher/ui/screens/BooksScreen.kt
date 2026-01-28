@@ -15,7 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryViewModel
 import com.nosferatu.launcher.ui.components.books.BooksScreenLibraryList
-import com.nosferatu.launcher.ui.components.common.TopBar
+import com.nosferatu.launcher.ui.components.common.CustomStatusBar
 
 @Composable
 fun BooksScreen(
@@ -26,7 +26,7 @@ fun BooksScreen(
     val tag = "HomeScreen"
 
     Scaffold(
-        topBar = { TopBar(viewModel, uiState.isScanning) },
+        topBar = { CustomStatusBar() },
         containerColor = Color.White
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {

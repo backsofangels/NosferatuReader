@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.nosferatu.launcher.data.EbookEntity
+import org.json.JSONObject
 import java.io.File
 
 @Composable
@@ -24,6 +25,16 @@ fun HomeReadingNowItem(
     book: EbookEntity,
     onClick: () -> Unit
 ) {
+    val bookPercentage = book.lastLocationJson?.let {
+        jsonString ->
+        try {
+            val locationJson = JSONObject(jsonString)
+            locationJson.optJSONObject("locations")?.optString("progression") ?: "0"
+        } catch (_: Exception) {
+            "0%"
+        }
+    } ?: "0%"
+
     Column(
         modifier = modifier
             .width(100.dp)
@@ -63,7 +74,7 @@ fun HomeReadingNowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "10% letto", // Placeholder percentuale
+                text = "${bookPercentage}% LETTO",
                 fontSize = 12.sp,
                 color = Color.Black,
                 fontWeight = FontWeight.Medium
