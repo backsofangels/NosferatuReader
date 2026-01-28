@@ -1,5 +1,6 @@
 package com.nosferatu.launcher.ui.components.home
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,17 +20,27 @@ import com.nosferatu.launcher.data.EbookEntity
 import org.json.JSONObject
 import java.io.File
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun HomeReadingNowItem(
     modifier: Modifier = Modifier,
     book: EbookEntity,
     onClick: () -> Unit
 ) {
-    val bookPercentage = book.lastLocationJson?.let {
-        jsonString ->
+    fun formatPercentage(value: Double): String {
+        return if (value % 1 == 0.0) {
+            String.format(java.util.Locale.US, "%.0f", value)
+        } else {
+            String.format(java.util.Locale.US, "%.1f", value)
+        }
+    }
+
+    val bookPercentage = book.lastLocationJson?.let { jsonString ->
         try {
-            val locationJson = JSONObject(jsonString)
-            locationJson.optJSONObject("locations")?.optString("progression") ?: "0"
+            JSONObject(jsonString).optJSONObject("locations")?.let { locations ->
+                val p = locations.optDouble("progression")
+                if (p % 1 == 0.0) "%.0f%%".format(p) else "%.1f%%".format(p)
+            } ?: "0%"
         } catch (_: Exception) {
             "0%"
         }
@@ -74,7 +85,7 @@ fun HomeReadingNowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${bookPercentage}% LETTO",
+                text = "$bookPercentage LETTO",
                 fontSize = 12.sp,
                 color = Color.Black,
                 fontWeight = FontWeight.Medium
