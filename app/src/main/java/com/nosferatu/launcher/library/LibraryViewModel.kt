@@ -68,7 +68,6 @@ class LibraryViewModel(
         _screenSelectionTab.value = tab
         Log.d(_tag, "Switching to screen: ${tab.label}")
 
-        // Se vuoi che il passaggio a "Miei Libri" resetti sempre il filtro su "Tutti"
         if (tab == ScreenSelectionTab.MyBooks) {
             _booksFilterTab.value = LibraryFilterTab.All
         }

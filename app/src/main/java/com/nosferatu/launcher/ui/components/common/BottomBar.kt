@@ -58,7 +58,6 @@ fun BottomBar(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         color = Color.Black
                     )
-                    // Piccolo indicatore sotto il testo se attivo (opzionale, stile Kobo)
                     if (isSelected) {
                         Box(modifier = Modifier.padding(top = 2.dp).size(4.dp).background(Color.Black))
                     }

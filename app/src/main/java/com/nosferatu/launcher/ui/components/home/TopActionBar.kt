@@ -35,7 +35,6 @@ fun TopActionBar(
     isScanning: Boolean,
     onSyncClick: () -> Unit
 ) {
-    // Animazione di rotazione se isScanning è true
     val transition = rememberInfiniteTransition(label = "sync_rotation")
     val rotation by transition.animateFloat(
         initialValue = 0f,

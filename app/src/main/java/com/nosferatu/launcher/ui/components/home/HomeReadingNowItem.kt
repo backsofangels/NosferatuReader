@@ -52,11 +52,10 @@ fun HomeReadingNowItem(
             .clickable(onClick = onClick)
             .padding(4.dp)
     ) {
-        // Contenitore Copertina
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.7f) // Leggermente più largo per e-ink
+                .aspectRatio(0.7f)
                 .border(1.dp, Color.Black)
         ) {
             if (book.coverPath != null) {
@@ -77,7 +76,6 @@ fun HomeReadingNowItem(
             }
         }
 
-        // Dettagli sotto la copertina stile Kobo
         Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),

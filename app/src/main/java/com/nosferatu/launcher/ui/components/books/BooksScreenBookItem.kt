@@ -27,63 +27,63 @@ import java.io.File
 @Composable
 fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.Companion
+        modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(16.dp),
-        verticalAlignment = Alignment.Companion.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier.Companion
                 .width(40.dp)
                 .aspectRatio(0.75f)
-                .border(0.5.dp, Color.Companion.Black)
+                .border(0.5.dp, Color.Black)
         ) {
             if (book.coverPath != null) {
                 AsyncImage(
                     model = File(book.coverPath),
                     contentDescription = null,
-                    contentScale = ContentScale.Companion.Crop
+                    contentScale = ContentScale.Crop
                 )
             }
         }
 
         Column(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp)
         ) {
             Text(
                 text = book.title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Companion.Bold),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
-                overflow = TextOverflow.Companion.Ellipsis
+                overflow = TextOverflow.Ellipsis
             )
 
             if (book.author == null) {
                 Text(
                     text = "Autore Sconosciuto",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Companion.Gray
+                    color = Color.Gray
                 )
             } else {
                 Text(
                     text = book.author,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Companion.Gray
+                    color = Color.Gray
                 )
             }
         }
 
-        Column(horizontalAlignment = Alignment.Companion.End) {
+        Column(horizontalAlignment = Alignment.End) {
             val isNew = book.lastLocationJson == null
             Text(
                 text = if (isNew) "NON LETTO" else "IN LETTURA",
                 fontSize = 10.sp,
-                fontWeight = FontWeight.Companion.ExtraBold,
-                color = if (isNew) Color.Companion.Black else Color.Companion.DarkGray
+                fontWeight = FontWeight.ExtraBold,
+                color = if (isNew) Color.Black else Color.DarkGray
             )
-            Text(text = book.format, fontSize = 10.sp, color = Color.Companion.LightGray)
+            Text(text = book.format, fontSize = 10.sp, color = Color.LightGray)
         }
     }
 }

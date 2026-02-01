@@ -50,7 +50,6 @@ fun BatteryStatus() {
             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Companion.Bold),
             modifier = Modifier.Companion.padding(end = 4.dp)
         )
-        // Icona batteria minimalista "fatta a mano" per evitare dipendenze pesanti
         Box(
             modifier = Modifier.Companion
                 .width(18.dp)

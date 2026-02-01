@@ -15,7 +15,6 @@ class EpubParser : ParserStrategy {
         Log.d(_tag, "== START PARSING: ${file.name} ==")
         try {
             ZipFile(file).use { zip ->
-                // 1. Ricerca del file OPF
                 val opfPath = getOpfPath(zip) ?: run {
                     Log.e(_tag, "[!] ABORT: container.xml non trovato o 'full-path' mancante in ${file.name}")
                     return@withContext fallback(file)
@@ -29,7 +28,6 @@ class EpubParser : ParserStrategy {
 
                 Log.v(_tag, "Entry: ${opfEntry.name}")
 
-                // 2. Parsing dei metadati tramite OpfParser
                 Log.d(_tag, "[2] Avvio OpfParser.parse per: $opfPath")
 
                 val opfMetadata = zip.getInputStream(opfEntry).use { OpfParser.parse(it) }
@@ -49,8 +47,6 @@ class EpubParser : ParserStrategy {
                         Log.d(_tag, "[5] SUCCESS: Cover estratta correttamente (${coverBytes?.size} bytes)")
                     } else {
                         Log.e(_tag, "[!] FAILURE: L'entry cover '$fullPath' non esiste nello zip. Verifica resolvePath!")
-                        // Qui cerchiamo di capire cosa c'è nello zip per debuggare
-                        // zip.entries().asSequence().forEach { Log.v(_tag, "Zip Entry: ${it.name}") }
                     }
                 } ?: Log.w(_tag, "[4] WARNING: Nessun Href cover trovato nei metadati OPF")
 
@@ -88,7 +84,6 @@ class EpubParser : ParserStrategy {
     private fun resolvePath(basePath: String, relativePath: String): String {
         val parent = File(basePath).parent ?: ""
         val resolved = if (parent.isEmpty()) relativePath else "$parent/$relativePath"
-        // Log fondamentale per vedere se stiamo generando path tipo "OEBPS/\cover.jpg" o "OEBPS/cover.jpg"
         Log.v(_tag, "resolvePath: basePath='$basePath', relativePath='$relativePath' -> result='$resolved'")
         return resolved
     }
