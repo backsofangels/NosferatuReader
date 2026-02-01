@@ -12,36 +12,43 @@ class EpubParser : ParserStrategy {
     private val _tag = "EpubParser"
 
     override suspend fun parse(file: File): RawMetadata = withContext(Dispatchers.IO) {
-        Log.d(_tag, "Starting EPUB parsing for: ${file.name}")
+        Log.d(_tag, "== START PARSING: ${file.name} ==")
         try {
             ZipFile(file).use { zip ->
-                // Find OPF file reading container
                 val opfPath = getOpfPath(zip) ?: run {
-                    Log.w(_tag, "OPF path not found in ${file.name}")
+                    Log.e(_tag, "[!] ABORT: container.xml non trovato o 'full-path' mancante in ${file.name}")
                     return@withContext fallback(file)
                 }
-                Log.d(_tag, "Found OPF path: $opfPath")
+                Log.d(_tag, "[1] OPF Path individuato: $opfPath")
 
                 val opfEntry = zip.getEntry(opfPath) ?: run {
-                    Log.w(_tag, "OPF entry not found at $opfPath in ${file.name}")
+                    Log.e(_tag, "[!] ABORT: L'entry zip $opfPath è dichiarata nel container ma non esiste fisicamente")
                     return@withContext fallback(file)
                 }
 
-                // Parsing metadata
-                Log.d(_tag, "Parsing OPF metadata for: ${file.name}")
-                val opfMetadata = zip.getInputStream(opfEntry).use { OpfParser.parse(it) }
-                Log.d(_tag, "OPF metadata parsed: Title='${opfMetadata.title}', Author='${opfMetadata.author}'")
+                Log.v(_tag, "Entry: ${opfEntry.name}")
 
-                // Cover extraction
+                Log.d(_tag, "[2] Avvio OpfParser.parse per: $opfPath")
+
+                val opfMetadata = zip.getInputStream(opfEntry).use { OpfParser.parse(it) }
+                Log.d(_tag, "[2.1] OpfMetadata content: $opfMetadata")
+
+                Log.d(_tag, "[3] Risultato OpfParser: Title='${opfMetadata.title}', Author='${opfMetadata.author}', CoverHref='${opfMetadata.coverHref}'")
+
+                // 3. Estrazione della Cover
                 var coverBytes: ByteArray? = null
                 opfMetadata.coverHref?.let { href ->
                     val fullPath = resolvePath(opfPath, href)
-                    Log.d(_tag, "Attempting to extract cover from: $fullPath")
-                    zip.getEntry(fullPath)?.let { entry ->
+                    Log.d(_tag, "[4] Tentativo estrazione cover. Href originale: '$href' -> Path risolto: '$fullPath'")
+
+                    val entry = zip.getEntry(fullPath)
+                    if (entry != null) {
                         coverBytes = zip.getInputStream(entry).readBytes()
-                        Log.d(_tag, "Cover extracted successfully (${coverBytes?.size} bytes)")
-                    } ?: Log.w(_tag, "Cover entry not found at $fullPath")
-                } ?: Log.d(_tag, "No cover found in OPF metadata")
+                        Log.d(_tag, "[5] SUCCESS: Cover estratta correttamente (${coverBytes?.size} bytes)")
+                    } else {
+                        Log.e(_tag, "[!] FAILURE: L'entry cover '$fullPath' non esiste nello zip. Verifica resolvePath!")
+                    }
+                } ?: Log.w(_tag, "[4] WARNING: Nessun Href cover trovato nei metadati OPF")
 
                 RawMetadata(
                     title = opfMetadata.title ?: file.nameWithoutExtension,
@@ -50,8 +57,10 @@ class EpubParser : ParserStrategy {
                 )
             }
         } catch (e: Exception) {
-            Log.e(_tag, "Critical error parsing EPUB: ${file.name}", e)
+            Log.e(_tag, "[!!!] ERRORE CRITICO durante il parsing di ${file.name}", e)
             fallback(file)
+        } finally {
+            Log.d(_tag, "== END PARSING: ${file.name} ==")
         }
     }
 
@@ -63,7 +72,9 @@ class EpubParser : ParserStrategy {
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG && parser.name == "rootfile") {
-                return parser.getAttributeValue(null, "full-path")
+                val path = parser.getAttributeValue(null, "full-path")
+                Log.v(_tag, "container.xml: trovato rootfile con path '$path'")
+                return path
             }
             eventType = parser.next()
         }
@@ -72,11 +83,13 @@ class EpubParser : ParserStrategy {
 
     private fun resolvePath(basePath: String, relativePath: String): String {
         val parent = File(basePath).parent ?: ""
-        return if (parent.isEmpty()) relativePath else "$parent/$relativePath"
+        val resolved = if (parent.isEmpty()) relativePath else "$parent/$relativePath"
+        Log.v(_tag, "resolvePath: basePath='$basePath', relativePath='$relativePath' -> result='$resolved'")
+        return resolved
     }
 
     private fun fallback(file: File): RawMetadata {
-        Log.d(_tag, "Using fallback metadata for: ${file.name}")
+        Log.w(_tag, "FALLBACK attivato per: ${file.name}. Titolo impostato al nome file.")
         return RawMetadata(file.nameWithoutExtension, null)
     }
 }

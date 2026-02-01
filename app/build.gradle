@@ -12,6 +12,7 @@ android {
     defaultConfig {
         applicationId "com.nosferatu.launcher"
         minSdkVersion 25
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0"
 
@@ -48,6 +49,10 @@ dependencies {
     implementation libs.androidx.runtime
     implementation libs.lifecycle.runtime.compose
     implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.foundation
+    implementation libs.androidx.navigation.runtime.ktx
+    implementation libs.androidx.compose.foundation.layout
+    implementation libs.androidx.foundation
 
     // Desugaring per supporto Java 8+ su vecchi dispositivi
     coreLibraryDesugaring libs.android.desugar

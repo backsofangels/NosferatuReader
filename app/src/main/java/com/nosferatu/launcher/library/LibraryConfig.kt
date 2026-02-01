@@ -15,7 +15,7 @@ class LibraryConfig(private val context: Context) {
         private const val KEY_ROOT_PATH = "root_path"
         // This should be default, for dev on emulator keeping downloads
         // private val DEFAULT_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath
-        private val DEFAULT_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+        private val DEFAULT_PATH = Environment.getExternalStorageDirectory().absolutePath
     }
 
     var rootPath: String
@@ -33,17 +33,5 @@ class LibraryConfig(private val context: Context) {
         val dir = File(rootPath)
         Log.d(TAG, "Root directory: ${dir.absolutePath} (exists: ${dir.exists()})")
         return dir
-    }
-
-    //TODO: Can i remove it?
-    fun hasStoragePermission(): Boolean {
-        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            // For older androids READ_EXTERNAL_STORAGE should suffice
-            true
-        }
-        Log.d(TAG, "Checking storage permission: $hasPermission")
-        return hasPermission
     }
 }
