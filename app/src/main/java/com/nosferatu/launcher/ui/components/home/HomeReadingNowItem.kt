@@ -39,12 +39,12 @@ fun HomeReadingNowItem(
         try {
             JSONObject(jsonString).optJSONObject("locations")?.let { locations ->
                 val p = locations.optDouble("progression")
-                if (p % 1 == 0.0) "%.0f%%".format(p) else "%.1f%%".format(p)
+                formatPercentage(p)
             } ?: "0%"
         } catch (_: Exception) {
-            "0%"
+            "0"
         }
-    } ?: "0%"
+    } ?: "0"
 
     Column(
         modifier = modifier
@@ -57,7 +57,7 @@ fun HomeReadingNowItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.7f) // Leggermente più largo per e-ink
-                .border(0.5.dp, Color.Black)
+                .border(1.dp, Color.Black)
         ) {
             if (book.coverPath != null) {
                 AsyncImage(
@@ -85,7 +85,7 @@ fun HomeReadingNowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$bookPercentage LETTO",
+                text = "$bookPercentage% LETTO",
                 fontSize = 12.sp,
                 color = Color.Black,
                 fontWeight = FontWeight.Medium

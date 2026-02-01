@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.nosferatu.launcher.R
 import com.nosferatu.launcher.library.LibraryViewModel
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 
 @Composable
@@ -50,14 +52,13 @@ fun TopActionBar(
             .fillMaxWidth()
             .background(Color.White)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(48.dp)
                 .padding(horizontal = 16.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically // Allineamento verticale
+            contentAlignment = Alignment.CenterEnd,
         ) {
-            Spacer(modifier = Modifier.weight(1f))
             Icon(
                 painter = painterResource(id = R.drawable.ic_sync_icon),
                 contentDescription = null,

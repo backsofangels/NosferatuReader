@@ -31,6 +31,7 @@ material3 = "1.4.0"
 foundation = "1.10.1"
 navigationRuntimeKtx = "2.9.6"
 foundationLayout = "1.10.1"
+foundationVersion = "1.10.2"
 
 [libraries]
 # Core & Utils
@@ -83,6 +84,7 @@ androidx-documentfile = { group = "androidx.documentfile", name = "documentfile"
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
+androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
