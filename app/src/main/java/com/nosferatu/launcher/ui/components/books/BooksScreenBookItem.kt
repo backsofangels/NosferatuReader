@@ -34,8 +34,8 @@ fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.Companion
-                .width(40.dp)
+            modifier = Modifier
+                .width(55.dp)
                 .aspectRatio(0.75f)
                 .border(0.5.dp, Color.Black)
         ) {
@@ -43,7 +43,7 @@ fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
                 AsyncImage(
                     model = File(book.coverPath),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.FillBounds
                 )
             }
         }

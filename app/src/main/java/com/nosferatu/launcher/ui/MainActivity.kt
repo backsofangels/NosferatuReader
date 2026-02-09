@@ -39,6 +39,7 @@ import com.nosferatu.launcher.ui.components.common.BottomBar
 import com.nosferatu.launcher.ui.components.common.CustomStatusBar
 import com.nosferatu.launcher.ui.screens.HomeScreen
 import androidx.core.net.toUri
+import com.nosferatu.launcher.library.LibraryFilterTab
 
 class MainActivity: AppCompatActivity() {
     private val _tag: String = "MainActivity"
@@ -66,7 +67,9 @@ class MainActivity: AppCompatActivity() {
 
             MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
                 Scaffold(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .systemBarsPadding(),
                     topBar = { CustomStatusBar() },
                     bottomBar = {
                         BottomBar(
@@ -86,7 +89,9 @@ class MainActivity: AppCompatActivity() {
                             )
                             ScreenSelectionTab.MyBooks -> {
                                 Column {
-                                    BooksFilterBar(uiState)
+                                    BooksFilterBar(uiState, LibraryFilterTab.ALL, onFilterChange = {
+                                            //TODO
+                                        } )
                                     BooksScreenLibraryList(uiState, onOpenBook = { openBook(it) })
                                 }
                             }

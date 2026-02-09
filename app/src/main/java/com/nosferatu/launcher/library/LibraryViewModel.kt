@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.collections.emptyList
 
 class LibraryViewModel(
     private val repository: LibraryRepository
@@ -21,7 +22,7 @@ class LibraryViewModel(
     private val _tag = "LibraryViewModel"
     private val _isScanning = MutableStateFlow(false)
     private val _hasPermission = MutableStateFlow(false)
-    private val _booksFilterTab = MutableStateFlow<LibraryFilterTab>(LibraryFilterTab.All)
+    private val _booksFilterTab = MutableStateFlow<LibraryFilterTab>(LibraryFilterTab.ALL)
     private val _screenSelectionTab = MutableStateFlow<ScreenSelectionTab>(ScreenSelectionTab.Home)
     private val _error = MutableStateFlow<String?>(null)
 
@@ -33,11 +34,8 @@ class LibraryViewModel(
         if (!permission) return@combine emptyList()
 
         when (filter) {
-            LibraryFilterTab.All -> books.sortedByDescending { it.id }
-            LibraryFilterTab.Authors -> books.groupBy { it.author }.values.flatten().sortedByDescending { it.id }
-            //LibraryFilterTab.Series -> books.groupBy { it.series }.values.flatten().sortedByDescending { it.id }
-            //LibraryFilterTab.Collections -> books
-            else -> books
+            LibraryFilterTab.ALL -> books.sortedByDescending { it.id }
+            LibraryFilterTab.AUTHORS -> books.sortedBy { it.author ?: "Sconosciuto" }
         }
     }
 
@@ -48,7 +46,6 @@ class LibraryViewModel(
         _screenSelectionTab,
         _error
     ) { books, scanning, permission, screenSelectionTab, error ->
-
         LibraryUiState(
             books = books,
             isScanning = scanning,
@@ -62,6 +59,10 @@ class LibraryViewModel(
         initialValue = LibraryUiState()
     )
 
+    fun onFilterChange(filter: LibraryFilterTab) {
+        _booksFilterTab.value = filter
+    }
+
     fun selectScreenTab(tab: ScreenSelectionTab) {
         if (_screenSelectionTab.value == tab) return
 
@@ -69,7 +70,7 @@ class LibraryViewModel(
         Log.d(_tag, "Switching to screen: ${tab.label}")
 
         if (tab == ScreenSelectionTab.MyBooks) {
-            _booksFilterTab.value = LibraryFilterTab.All
+            _booksFilterTab.value = LibraryFilterTab.ALL
         }
     }
 

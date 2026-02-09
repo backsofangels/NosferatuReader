@@ -12,21 +12,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.nosferatu.launcher.library.LibraryFilterTab
 import com.nosferatu.launcher.ui.states.LibraryUiState
 
 @Composable
-fun BooksFilterBar(uiState: LibraryUiState) {
+fun BooksFilterBar(
+    uiState: LibraryUiState,
+    filter: LibraryFilterTab,
+    onFilterChange: (LibraryFilterTab) -> Unit
+) {
     Column(modifier = Modifier.background(Color.White)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, bottom = 10.dp),
+                .height(48.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            BooksScreenFilterTabItem("Libri", active = true)
-            BooksScreenFilterTabItem("Autori", active = false)
-            BooksScreenFilterTabItem("Serie", active = false)
-            BooksScreenFilterTabItem("Raccolte", active = false)
+            BooksScreenFilterTabItem("Libri", active = true, onClick = { onFilterChange(LibraryFilterTab.ALL) })
+            BooksScreenFilterTabItem("Autori", active = false, onClick = { onFilterChange(LibraryFilterTab.AUTHORS) })
+            //TODO: add series and collections
         }
         Box(
             modifier = Modifier
