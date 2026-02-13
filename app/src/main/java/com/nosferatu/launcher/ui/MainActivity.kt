@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -89,10 +90,20 @@ class MainActivity: AppCompatActivity() {
                             )
                             ScreenSelectionTab.MyBooks -> {
                                 Column {
-                                    BooksFilterBar(uiState, LibraryFilterTab.ALL, onFilterChange = {
-                                            //TODO
-                                        } )
-                                    BooksScreenLibraryList(uiState, onOpenBook = { openBook(it) })
+                                    BooksFilterBar(
+                                        uiState = uiState,
+                                        filter = uiState.booksFilterTab,
+                                        onFilterChange = { newFilter ->
+                                            viewModel.onFilterChange(newFilter)
+                                        }
+                                    )
+                                    BooksScreenLibraryList(
+                                        uiState,
+                                        onOpenBook = { openBook(it) },
+                                        onToggleAuthor = { author ->
+                                            viewModel.toggleAuthorExpansion(author)
+                                        }
+                                    )
                                 }
                             }
                             ScreenSelectionTab.More -> Text("Impostazioni")

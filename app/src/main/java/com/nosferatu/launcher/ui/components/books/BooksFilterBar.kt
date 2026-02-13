@@ -29,8 +29,8 @@ fun BooksFilterBar(
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            BooksScreenFilterTabItem("Libri", active = true, onClick = { onFilterChange(LibraryFilterTab.ALL) })
-            BooksScreenFilterTabItem("Autori", active = false, onClick = { onFilterChange(LibraryFilterTab.AUTHORS) })
+            BooksScreenFilterTabItem("Libri", filter == LibraryFilterTab.ALL, onClick = { onFilterChange(LibraryFilterTab.ALL) })
+            BooksScreenFilterTabItem("Autori", filter == LibraryFilterTab.AUTHORS, onClick = { onFilterChange(LibraryFilterTab.AUTHORS) })
             //TODO: add series and collections
         }
         Box(

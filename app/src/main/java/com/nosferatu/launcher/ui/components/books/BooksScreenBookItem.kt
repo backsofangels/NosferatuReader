@@ -25,7 +25,11 @@ import com.nosferatu.launcher.data.EbookEntity
 import java.io.File
 
 @Composable
-fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
+fun BooksScreenBookItem(
+    book: EbookEntity,
+    showAuthor: Boolean = true,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -60,18 +64,20 @@ fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            if (book.author == null) {
-                Text(
-                    text = "Autore Sconosciuto",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            } else {
-                Text(
-                    text = book.author,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
+            if (showAuthor) {
+                if (book.author == null) {
+                    Text(
+                        text = "Autore Sconosciuto",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                } else {
+                    Text(
+                        text = book.author,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
             }
         }
 

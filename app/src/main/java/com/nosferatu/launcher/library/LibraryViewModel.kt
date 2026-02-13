@@ -8,6 +8,7 @@ import com.nosferatu.launcher.ui.states.LibraryUiState
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.ui.ScreenSelectionTab
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,9 +23,10 @@ class LibraryViewModel(
     private val _tag = "LibraryViewModel"
     private val _isScanning = MutableStateFlow(false)
     private val _hasPermission = MutableStateFlow(false)
-    private val _booksFilterTab = MutableStateFlow<LibraryFilterTab>(LibraryFilterTab.ALL)
-    private val _screenSelectionTab = MutableStateFlow<ScreenSelectionTab>(ScreenSelectionTab.Home)
+    private val _booksFilterTab = MutableStateFlow(LibraryFilterTab.ALL)
+    private val _screenSelectionTab = MutableStateFlow(ScreenSelectionTab.Home)
     private val _error = MutableStateFlow<String?>(null)
+    private val _expandedAuthors = MutableStateFlow<Set<String>>(emptySet())
 
     private val _filteredBooks = combine(
         repository.allBooks,
@@ -44,13 +46,17 @@ class LibraryViewModel(
         _isScanning,
         _hasPermission,
         _screenSelectionTab,
+        _booksFilterTab,
+        _expandedAuthors,
         _error
-    ) { books, scanning, permission, screenSelectionTab, error ->
+    ) { books, scanning, permission, screenTab, filterTab, expanded, error ->
         LibraryUiState(
             books = books,
             isScanning = scanning,
             hasPermission = permission,
-            screenSelectionTab = screenSelectionTab,
+            screenSelectionTab = screenTab,
+            booksFilterTab = filterTab,
+            expandedAuthors = expanded,
             error = error
         )
     }.stateIn(
@@ -58,6 +64,15 @@ class LibraryViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = LibraryUiState()
     )
+
+    fun toggleAuthorExpansion(author: String) {
+        val current = _expandedAuthors.value
+        _expandedAuthors.value = if (current.contains(author)) {
+            current - author
+        } else {
+            current + author
+        }
+    }
 
     fun onFilterChange(filter: LibraryFilterTab) {
         _booksFilterTab.value = filter
@@ -116,3 +131,4 @@ class LibraryViewModel(
         }
     }
 }
+
