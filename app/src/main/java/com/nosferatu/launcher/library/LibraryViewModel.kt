@@ -8,12 +8,14 @@ import com.nosferatu.launcher.ui.states.LibraryUiState
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.ui.ScreenSelectionTab
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.collections.emptyList
 
 class LibraryViewModel(
     private val repository: LibraryRepository
@@ -21,9 +23,10 @@ class LibraryViewModel(
     private val _tag = "LibraryViewModel"
     private val _isScanning = MutableStateFlow(false)
     private val _hasPermission = MutableStateFlow(false)
-    private val _booksFilterTab = MutableStateFlow<LibraryFilterTab>(LibraryFilterTab.All)
-    private val _screenSelectionTab = MutableStateFlow<ScreenSelectionTab>(ScreenSelectionTab.Home)
+    private val _booksFilterTab = MutableStateFlow(LibraryFilterTab.ALL)
+    private val _screenSelectionTab = MutableStateFlow(ScreenSelectionTab.Home)
     private val _error = MutableStateFlow<String?>(null)
+    private val _expandedAuthors = MutableStateFlow<Set<String>>(emptySet())
 
     private val _filteredBooks = combine(
         repository.allBooks,
@@ -33,11 +36,8 @@ class LibraryViewModel(
         if (!permission) return@combine emptyList()
 
         when (filter) {
-            LibraryFilterTab.All -> books.sortedByDescending { it.id }
-            LibraryFilterTab.Authors -> books.groupBy { it.author }.values.flatten().sortedByDescending { it.id }
-            //LibraryFilterTab.Series -> books.groupBy { it.series }.values.flatten().sortedByDescending { it.id }
-            //LibraryFilterTab.Collections -> books
-            else -> books
+            LibraryFilterTab.ALL -> books.sortedByDescending { it.id }
+            LibraryFilterTab.AUTHORS -> books.sortedBy { it.author ?: "Sconosciuto" }
         }
     }
 
@@ -46,14 +46,17 @@ class LibraryViewModel(
         _isScanning,
         _hasPermission,
         _screenSelectionTab,
+        _booksFilterTab,
+        _expandedAuthors,
         _error
-    ) { books, scanning, permission, screenSelectionTab, error ->
-
+    ) { books, scanning, permission, screenTab, filterTab, expanded, error ->
         LibraryUiState(
             books = books,
             isScanning = scanning,
             hasPermission = permission,
-            screenSelectionTab = screenSelectionTab,
+            screenSelectionTab = screenTab,
+            booksFilterTab = filterTab,
+            expandedAuthors = expanded,
             error = error
         )
     }.stateIn(
@@ -62,6 +65,19 @@ class LibraryViewModel(
         initialValue = LibraryUiState()
     )
 
+    fun toggleAuthorExpansion(author: String) {
+        val current = _expandedAuthors.value
+        _expandedAuthors.value = if (current.contains(author)) {
+            current - author
+        } else {
+            current + author
+        }
+    }
+
+    fun onFilterChange(filter: LibraryFilterTab) {
+        _booksFilterTab.value = filter
+    }
+
     fun selectScreenTab(tab: ScreenSelectionTab) {
         if (_screenSelectionTab.value == tab) return
 
@@ -69,7 +85,7 @@ class LibraryViewModel(
         Log.d(_tag, "Switching to screen: ${tab.label}")
 
         if (tab == ScreenSelectionTab.MyBooks) {
-            _booksFilterTab.value = LibraryFilterTab.All
+            _booksFilterTab.value = LibraryFilterTab.ALL
         }
     }
 
@@ -115,3 +131,4 @@ class LibraryViewModel(
         }
     }
 }
+

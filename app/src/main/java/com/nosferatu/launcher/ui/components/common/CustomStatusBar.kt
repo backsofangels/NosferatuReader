@@ -29,7 +29,7 @@ fun CustomStatusBar() {
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = 0.5.dp,
-            color = Color.LightGray.copy(alpha = 0.5f)
+            color = Color.Black
         )
     }
 }

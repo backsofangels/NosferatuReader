@@ -25,7 +25,11 @@ import com.nosferatu.launcher.data.EbookEntity
 import java.io.File
 
 @Composable
-fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
+fun BooksScreenBookItem(
+    book: EbookEntity,
+    showAuthor: Boolean = true,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -34,8 +38,8 @@ fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.Companion
-                .width(40.dp)
+            modifier = Modifier
+                .width(55.dp)
                 .aspectRatio(0.75f)
                 .border(0.5.dp, Color.Black)
         ) {
@@ -43,7 +47,7 @@ fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
                 AsyncImage(
                     model = File(book.coverPath),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.FillBounds
                 )
             }
         }
@@ -60,18 +64,20 @@ fun BooksScreenBookItem(book: EbookEntity, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            if (book.author == null) {
-                Text(
-                    text = "Autore Sconosciuto",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            } else {
-                Text(
-                    text = book.author,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
+            if (showAuthor) {
+                if (book.author == null) {
+                    Text(
+                        text = "Autore Sconosciuto",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                } else {
+                    Text(
+                        text = book.author,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
             }
         }
 

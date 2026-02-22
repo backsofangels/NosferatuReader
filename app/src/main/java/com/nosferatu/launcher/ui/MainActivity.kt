@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -39,6 +40,7 @@ import com.nosferatu.launcher.ui.components.common.BottomBar
 import com.nosferatu.launcher.ui.components.common.CustomStatusBar
 import com.nosferatu.launcher.ui.screens.HomeScreen
 import androidx.core.net.toUri
+import com.nosferatu.launcher.library.LibraryFilterTab
 
 class MainActivity: AppCompatActivity() {
     private val _tag: String = "MainActivity"
@@ -66,7 +68,9 @@ class MainActivity: AppCompatActivity() {
 
             MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
                 Scaffold(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .systemBarsPadding(),
                     topBar = { CustomStatusBar() },
                     bottomBar = {
                         BottomBar(
@@ -86,8 +90,20 @@ class MainActivity: AppCompatActivity() {
                             )
                             ScreenSelectionTab.MyBooks -> {
                                 Column {
-                                    BooksFilterBar(uiState)
-                                    BooksScreenLibraryList(uiState, onOpenBook = { openBook(it) })
+                                    BooksFilterBar(
+                                        uiState = uiState,
+                                        filter = uiState.booksFilterTab,
+                                        onFilterChange = { newFilter ->
+                                            viewModel.onFilterChange(newFilter)
+                                        }
+                                    )
+                                    BooksScreenLibraryList(
+                                        uiState,
+                                        onOpenBook = { openBook(it) },
+                                        onToggleAuthor = { author ->
+                                            viewModel.toggleAuthorExpansion(author)
+                                        }
+                                    )
                                 }
                             }
                             ScreenSelectionTab.More -> Text("Impostazioni")
