@@ -1,4 +1,4 @@
-# NosferatuLauncher
+# NosferatuReader
 
 A minimalist and high-contrast e-reader specifically designed for **Nosferatu OS**.
 
