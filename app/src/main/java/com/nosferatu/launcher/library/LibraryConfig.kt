@@ -1,5 +1,6 @@
 package com.nosferatu.launcher.library
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Environment
@@ -13,9 +14,9 @@ class LibraryConfig(private val context: Context) {
 
     companion object {
         private const val KEY_ROOT_PATH = "root_path"
-        // This should be default, for dev on emulator keeping downloads
-        // private val DEFAULT_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).absolutePath
+        private const val KEY_FONT_SIZE = "font_size_scale"
         private val DEFAULT_PATH = Environment.getExternalStorageDirectory().absolutePath
+        private const val DEFAULT_FONT_SIZE = 1.0f
     }
 
     var rootPath: String
@@ -34,4 +35,12 @@ class LibraryConfig(private val context: Context) {
         Log.d(TAG, "Root directory: ${dir.absolutePath} (exists: ${dir.exists()})")
         return dir
     }
+
+    var fontSizeScale: Float
+        get() = prefs.getFloat(KEY_FONT_SIZE, DEFAULT_FONT_SIZE)
+        @SuppressLint("UseKtx")
+        set(value) {
+            prefs.edit().putFloat(KEY_FONT_SIZE, value).apply()
+            Log.d(TAG, "Font size scale salvato: $value")
+        }
 }
