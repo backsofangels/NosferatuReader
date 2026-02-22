@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.NosferatuLauncher" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="Theme.NosferatuReader" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="readerBackgroundColor">@color/reader_bg_light</item>
         <item name="readerTextColor">@color/reader_text_light</item>
     </style>
 
-    <style name="Theme.NosferatuLauncher.Dark">
+    <style name="Theme.NosferatuReader.Dark">
         <item name="readerBackgroundColor">@color/reader_bg_dark</item>
         <item name="readerTextColor">@color/reader_text_dark</item>
     </style>
