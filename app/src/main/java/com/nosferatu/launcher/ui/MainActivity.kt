@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
@@ -40,7 +41,9 @@ import com.nosferatu.launcher.ui.components.common.BottomBar
 import com.nosferatu.launcher.ui.components.common.CustomStatusBar
 import com.nosferatu.launcher.ui.screens.HomeScreen
 import androidx.core.net.toUri
+import com.nosferatu.launcher.library.LibraryConfig
 import com.nosferatu.launcher.library.LibraryFilterTab
+import com.nosferatu.launcher.ui.screens.settings.SettingsScreen
 
 class MainActivity: AppCompatActivity() {
     private val _tag: String = "MainActivity"
@@ -61,6 +64,7 @@ class MainActivity: AppCompatActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val libraryConfig = remember { LibraryConfig(this@MainActivity) }
 
             LaunchedEffect(Unit) {
                 checkAndRequestPermissions()
@@ -106,7 +110,7 @@ class MainActivity: AppCompatActivity() {
                                     )
                                 }
                             }
-                            ScreenSelectionTab.More -> Text("Impostazioni")
+                            ScreenSelectionTab.More -> SettingsScreen(libraryConfig = libraryConfig)
                         }
                     }
                 }

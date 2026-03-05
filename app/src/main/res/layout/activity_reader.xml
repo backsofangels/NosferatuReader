@@ -115,46 +115,16 @@
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <LinearLayout
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/font_controls_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:background="?attr/readerBackgroundColor"
         android:elevation="4dp"
         android:visibility="gone"
-        android:paddingVertical="8dp"
-        android:gravity="center"
         app:layout_constraintTop_toBottomOf="@id/menu_top_bar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageView
-            android:id="@+id/btn_font_dec"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:padding="12dp"
-            android:src="@drawable/font_size_down"
-            app:tint="?attr/readerTextColor" />
-
-        <TextView
-            android:id="@+id/tv_font_label"
-            android:layout_width="80dp"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="100%"
-            android:textStyle="bold"
-            android:textColor="?attr/readerTextColor"
-            android:textSize="16sp" />
-
-        <ImageView
-            android:id="@+id/btn_font_inc"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:padding="12dp"
-            android:src="@drawable/font_size_up"
-            app:tint="?attr/readerTextColor" />
-    </LinearLayout>
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/menu_bottom_bar"
