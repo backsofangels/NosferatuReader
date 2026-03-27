@@ -38,13 +38,19 @@ fun HomeReadingNowItem(
     val bookPercentage = book.lastLocationJson?.let { jsonString ->
         try {
             JSONObject(jsonString).optJSONObject("locations")?.let { locations ->
-                val p = locations.optDouble("progression")
-                formatPercentage(p)
-            } ?: "0%"
+                val total = locations.optDouble("totalProgression", Double.NaN)
+                val local = locations.optDouble("progression", Double.NaN)
+                val normalized = when {
+                    !total.isNaN() -> total
+                    !local.isNaN() -> local
+                    else -> book.progression
+                }.coerceIn(0.0, 1.0)
+                formatPercentage(normalized * 100.0)
+            } ?: formatPercentage(book.progression.coerceIn(0.0, 1.0) * 100.0)
         } catch (_: Exception) {
-            "0"
+            formatPercentage(book.progression.coerceIn(0.0, 1.0) * 100.0)
         }
-    } ?: "0"
+    } ?: formatPercentage(book.progression.coerceIn(0.0, 1.0) * 100.0)
 
     Column(
         modifier = modifier

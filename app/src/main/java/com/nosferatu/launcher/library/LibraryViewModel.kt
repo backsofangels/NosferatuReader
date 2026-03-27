@@ -94,9 +94,9 @@ class LibraryViewModel(
         if (isGranted) scanBooks()
     }
 
-    fun saveBookPosition(bookId: Long, location: String) {
+    fun saveBookPosition(bookId: Long, location: String, progression: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateBookPosition(bookId, location, 0.0)
+            repository.updateBookPosition(bookId, location, progression)
         }
     }
 

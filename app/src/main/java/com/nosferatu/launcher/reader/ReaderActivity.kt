@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -33,6 +34,7 @@ import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.locateProgression
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.getOrElse
@@ -61,6 +63,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     private var isMenuVisible = false
     private var isFontBarVisible = false
+    private var isSeeking = false
     private val libraryConfig by lazy { LibraryConfig(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,6 +129,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 navigator?.addInputListener(readerInputListener)
 
                 if (navigator != null) {
+                    setupProgressBarSeek(navigator)
                     launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             navigator.currentLocator.collect { locator ->
@@ -177,7 +181,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     private fun updateUiWithLocator(locator: Locator) {
         val chapterTitle = locator.title ?: ""
         val progression = locator.locations.totalProgression ?: 0.0
-        val percent = (progression * 100).toInt()
+        val percent = (progression * 100).toInt().coerceIn(0, 100)
         val bookTitle = publication?.metadata?.title?.uppercase() ?: ""
         val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name
 
@@ -186,8 +190,51 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         findViewById<ProgressBar>(R.id.immersive_progress_bar).progress = percent
 
         findViewById<TextView>(R.id.menu_page_text).text = "$percent%"
+        if (!isSeeking) {
+            findViewById<SeekBar>(R.id.menu_seek_bar).progress = percent
+        }
         findViewById<TextView>(R.id.menu_book_title).text = bookTitle
         findViewById<TextView>(R.id.menu_book_author).text = bookAuthor
+    }
+
+    private fun setupProgressBarSeek(navigator: EpubNavigatorFragment) {
+        val menuSeekBar = findViewById<SeekBar>(R.id.menu_seek_bar)
+        menuSeekBar.max = 100
+        menuSeekBar.setOnSeekBarChangeListener(createSeekBarListener(navigator))
+    }
+
+    private fun createSeekBarListener(navigator: EpubNavigatorFragment): SeekBar.OnSeekBarChangeListener {
+        return object : SeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(seekBar: SeekBar) {
+                isSeeking = true
+            }
+
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    findViewById<TextView>(R.id.menu_page_text).text = "$progress%"
+                }
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+                val targetProgression = (seekBar.progress / 100.0).coerceIn(0.0, 1.0)
+                val pub = publication
+                if (pub == null) {
+                    isSeeking = false
+                    return
+                }
+
+                lifecycleScope.launch {
+                    try {
+                        val locator = pub.locateProgression(targetProgression) ?: return@launch
+                        _lastKnownLocator = locator
+                        saveLocation(bookId, locator)
+                        navigator.go(locator, animated = false)
+                    } finally {
+                        isSeeking = false
+                    }
+                }
+            }
+        }
     }
 
     private fun toggleMenu() {
@@ -219,8 +266,10 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     private fun saveLocation(bookId: Long, locator: Locator?) {
         if (bookId == -1L) return
-        val jsonLocation = locator?.toJSON().toString()
-        viewModel.saveBookPosition(bookId, jsonLocation)
+        if (locator == null) return
+        val jsonLocation = locator.toJSON().toString()
+        val progression = locator.locations.totalProgression ?: 0.0
+        viewModel.saveBookPosition(bookId, jsonLocation, progression)
     }
 
     override fun onStop() {
