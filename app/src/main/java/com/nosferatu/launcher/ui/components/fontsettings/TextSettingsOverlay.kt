@@ -32,38 +32,15 @@ fun ReaderTextSettings(
             .background(Color.White)
             .padding(24.dp)
     ) {
-        Text(
-            text = "CARATTERE",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            ),
-            color = Color.Black.copy(alpha = 0.6f),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
         // 1. Dimensione Testo: range tipico e-reader 0.5f - 2.5f
         SliderRow(
-            label = "Dimensioni",
+            label = "Dimensioni carattere",
             currentValue = libraryConfig.fontSizeScale,
             minValue = 0.5f,
             maxValue = 2.5f,
             steps = 20,
             onValueChange = {
                 libraryConfig.updateFontSize(it)
-                onPreferenceChanged()
-            }
-        )
-
-        // 2. Interlinea: range tipico 1.0f - 2.5f
-        SliderRow(
-            label = "Interlinea",
-            currentValue = libraryConfig.lineHeightFactor,
-            minValue = 1.0f,
-            maxValue = 2.5f,
-            steps = 15,
-            onValueChange = {
-                libraryConfig.updateLineHeight(it)
                 onPreferenceChanged()
             }
         )
