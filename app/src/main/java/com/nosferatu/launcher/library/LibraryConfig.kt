@@ -5,8 +5,11 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.util.Log
+import androidx.compose.runtime.mutableFloatStateOf
 import java.io.File
 import androidx.core.content.edit
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class LibraryConfig(private val context: Context) {
     private val TAG = "LibraryConfig"
@@ -15,8 +18,12 @@ class LibraryConfig(private val context: Context) {
     companion object {
         private const val KEY_ROOT_PATH = "root_path"
         private const val KEY_FONT_SIZE = "font_size_scale"
+        private const val KEY_LINE_HEIGHT = "line_height_factor"
+        private const val KEY_PAGE_MARGINS = "page_margins"
         private val DEFAULT_PATH = Environment.getExternalStorageDirectory().absolutePath
-        private const val DEFAULT_FONT_SIZE = 1.0f
+        private const val DEFAULT_FONT_SIZE = 1.1f
+        private const val DEFAULT_LINE_HEIGHT = 1.5f
+        private const val DEFAULT_PAGE_MARGINS = 1.0f
     }
 
     var rootPath: String
@@ -36,11 +43,31 @@ class LibraryConfig(private val context: Context) {
         return dir
     }
 
-    var fontSizeScale: Float
-        get() = prefs.getFloat(KEY_FONT_SIZE, DEFAULT_FONT_SIZE)
-        @SuppressLint("UseKtx")
-        set(value) {
-            prefs.edit().putFloat(KEY_FONT_SIZE, value).apply()
-            Log.d(TAG, "Font size scale salvato: $value")
-        }
+    var fontSizeScale by mutableFloatStateOf(
+        prefs.getFloat(KEY_FONT_SIZE, DEFAULT_FONT_SIZE)
+    )
+        private set
+
+    var lineHeightFactor by mutableFloatStateOf(prefs.getFloat(KEY_LINE_HEIGHT, DEFAULT_LINE_HEIGHT))
+        private set
+
+    fun updateFontSize(newValue: Float) {
+        fontSizeScale = newValue
+        prefs.edit().putFloat(KEY_FONT_SIZE, newValue).apply()
+        Log.d(TAG, "Font size scale aggiornato e salvato: $newValue")
+    }
+
+    fun updateLineHeight(newValue: Float) {
+        lineHeightFactor = newValue
+        prefs.edit().putFloat(KEY_LINE_HEIGHT, newValue).apply()
+        Log.d(TAG, "Line height scale aggiornato e salvato: $newValue")
+    }
+
+    var pageMargins by mutableFloatStateOf(prefs.getFloat(KEY_PAGE_MARGINS, DEFAULT_PAGE_MARGINS))
+        private set
+
+    fun updatePageMargins(newValue: Float) {
+        pageMargins = newValue
+        prefs.edit().putFloat(KEY_PAGE_MARGINS, newValue).apply()
+    }
 }

@@ -82,7 +82,8 @@ class LibraryViewModel(
         if (_screenSelectionTab.value == tab) return
 
         _screenSelectionTab.value = tab
-        Log.d(_tag, "Switching to screen: ${tab.label}")
+        // ViewModel should not access UI resources; log the enum name instead of a string resource
+        Log.d(_tag, "Switching to screen: ${tab.name}")
 
         if (tab == ScreenSelectionTab.MyBooks) {
             _booksFilterTab.value = LibraryFilterTab.ALL
@@ -94,9 +95,9 @@ class LibraryViewModel(
         if (isGranted) scanBooks()
     }
 
-    fun saveBookPosition(bookId: Long, location: String) {
+    fun saveBookPosition(bookId: Long, location: String, progression: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateBookPosition(bookId, location, 0.0)
+            repository.updateBookPosition(bookId, location, progression)
         }
     }
 

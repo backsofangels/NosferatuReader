@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
 import com.nosferatu.launcher.data.EbookEntity
 import org.json.JSONObject
@@ -38,13 +39,19 @@ fun HomeReadingNowItem(
     val bookPercentage = book.lastLocationJson?.let { jsonString ->
         try {
             JSONObject(jsonString).optJSONObject("locations")?.let { locations ->
-                val p = locations.optDouble("progression")
-                formatPercentage(p)
-            } ?: "0%"
+                val total = locations.optDouble("totalProgression", Double.NaN)
+                val local = locations.optDouble("progression", Double.NaN)
+                val normalized = when {
+                    !total.isNaN() -> total
+                    !local.isNaN() -> local
+                    else -> book.progression
+                }.coerceIn(0.0, 1.0)
+                formatPercentage(normalized * 100.0)
+            } ?: formatPercentage(book.progression.coerceIn(0.0, 1.0) * 100.0)
         } catch (_: Exception) {
-            "0"
+            formatPercentage(book.progression.coerceIn(0.0, 1.0) * 100.0)
         }
-    } ?: "0"
+    } ?: formatPercentage(book.progression.coerceIn(0.0, 1.0) * 100.0)
 
     Column(
         modifier = modifier
@@ -83,7 +90,7 @@ fun HomeReadingNowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$bookPercentage% LETTO",
+                text = stringResource(id = com.nosferatu.launcher.R.string.read_percent_format, bookPercentage),
                 fontSize = 12.sp,
                 color = Color.Black,
                 fontWeight = FontWeight.Medium
