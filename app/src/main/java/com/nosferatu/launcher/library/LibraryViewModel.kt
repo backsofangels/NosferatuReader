@@ -82,7 +82,8 @@ class LibraryViewModel(
         if (_screenSelectionTab.value == tab) return
 
         _screenSelectionTab.value = tab
-        Log.d(_tag, "Switching to screen: ${tab.label}")
+        // ViewModel should not access UI resources; log the enum name instead of a string resource
+        Log.d(_tag, "Switching to screen: ${tab.name}")
 
         if (tab == ScreenSelectionTab.MyBooks) {
             _booksFilterTab.value = LibraryFilterTab.ALL

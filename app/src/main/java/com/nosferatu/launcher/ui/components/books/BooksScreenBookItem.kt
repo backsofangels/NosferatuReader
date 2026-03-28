@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,7 +68,7 @@ fun BooksScreenBookItem(
             if (showAuthor) {
                 if (book.author == null) {
                     Text(
-                        text = "Autore Sconosciuto",
+                        text = stringResource(id = com.nosferatu.launcher.R.string.unknown_author),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray
                     )
@@ -84,7 +85,7 @@ fun BooksScreenBookItem(
         Column(horizontalAlignment = Alignment.End) {
             val isNew = book.lastLocationJson == null
             Text(
-                text = if (isNew) "NON LETTO" else "IN LETTURA",
+                text = if (isNew) stringResource(id = com.nosferatu.launcher.R.string.status_unread) else stringResource(id = com.nosferatu.launcher.R.string.status_reading),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = if (isNew) Color.Black else Color.DarkGray

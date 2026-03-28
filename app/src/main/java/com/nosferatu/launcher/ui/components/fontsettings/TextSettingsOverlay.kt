@@ -4,22 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.nosferatu.launcher.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nosferatu.launcher.library.LibraryConfig
-import kotlin.math.roundToInt
+// ...existing imports kept; removed unused ones to clean warnings
 
 @Composable
 fun ReaderTextSettings(
@@ -34,7 +33,7 @@ fun ReaderTextSettings(
     ) {
         // 1. Dimensione Testo: range tipico e-reader 0.5f - 2.5f
         SliderRow(
-            label = "Dimensioni carattere",
+            label = stringResource(id = R.string.dimension_label),
             currentValue = libraryConfig.fontSizeScale,
             minValue = 0.5f,
             maxValue = 2.5f,
@@ -81,7 +80,7 @@ fun SliderRow(
             verticalAlignment = Alignment.CenterVertically, // Allinea i centri di pulsanti e slider
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            ControlTextButton("-") {
+            ControlTextButton(stringResource(id = R.string.symbol_minus)) {
                 if (currentValue > minValue) {
                     val stepSize = (maxValue - minValue) / (if (steps > 0) steps else 10)
                     onValueChange((currentValue - stepSize).coerceAtLeast(minValue))
@@ -129,7 +128,7 @@ fun SliderRow(
                 )
             }
 
-            ControlTextButton("+") {
+            ControlTextButton(stringResource(id = R.string.symbol_plus)) {
                 if (currentValue < maxValue) {
                     val stepSize = (maxValue - minValue) / (if (steps > 0) steps else 10)
                     onValueChange((currentValue + stepSize).coerceAtMost(maxValue))

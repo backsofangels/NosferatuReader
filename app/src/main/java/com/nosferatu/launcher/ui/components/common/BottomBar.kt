@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -48,12 +49,12 @@ fun BottomBar(
                 ) {
                     Icon(
                         painter = painterResource(id = tab.iconRes),
-                        contentDescription = tab.label,
+                        contentDescription = stringResource(id = tab.labelRes),
                         modifier = Modifier.size(22.dp),
                         tint = Color.Black
                     )
                     Text(
-                        text = tab.label,
+                        text = stringResource(id = tab.labelRes),
                         fontSize = 10.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         color = Color.Black

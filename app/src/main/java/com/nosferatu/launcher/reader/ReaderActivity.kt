@@ -186,10 +186,10 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name
 
         findViewById<TextView>(R.id.immersive_header_title).text = chapterTitle.uppercase()
-        findViewById<TextView>(R.id.immersive_footer_text).text = "$bookTitle - $percent%"
+        findViewById<TextView>(R.id.immersive_footer_text).text = getString(com.nosferatu.launcher.R.string.reader_footer_format, bookTitle, percent)
         findViewById<ProgressBar>(R.id.immersive_progress_bar).progress = percent
 
-        findViewById<TextView>(R.id.menu_page_text).text = "$percent%"
+        findViewById<TextView>(R.id.menu_page_text).text = getString(com.nosferatu.launcher.R.string.percent_format, percent)
         if (!isSeeking) {
             findViewById<SeekBar>(R.id.menu_seek_bar).progress = percent
         }

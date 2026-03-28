@@ -2,10 +2,10 @@ package com.nosferatu.launcher.ui.screens.settings
 
 import kotlin.math.abs
 
-enum class FontSizeOption(val label: String, val value: Float) {
-    SMALL("Piccola", 0.8f),
-    MEDIUM("Media", 1.1f),
-    BIG("Grande", 1.5f);
+enum class FontSizeOption(val labelRes: Int, val value: Float) {
+    SMALL(com.nosferatu.launcher.R.string.font_size_small, 0.8f),
+    MEDIUM(com.nosferatu.launcher.R.string.font_size_medium, 1.1f),
+    BIG(com.nosferatu.launcher.R.string.font_size_large, 1.5f);
 
     companion object {
         fun fromValue(value: Float): FontSizeOption =
@@ -13,10 +13,10 @@ enum class FontSizeOption(val label: String, val value: Float) {
     }
 }
 
-enum class LineHeightOption(val label: String, val value: Float) {
-    SMALL("Stretta", 1.1f),
-    MEDIUM("Normale", 1.5f),
-    WIDE("Ampia", 2.0f);
+enum class LineHeightOption(val labelRes: Int, val value: Float) {
+    SMALL(com.nosferatu.launcher.R.string.line_height_narrow, 1.1f),
+    MEDIUM(com.nosferatu.launcher.R.string.line_height_normal, 1.5f),
+    WIDE(com.nosferatu.launcher.R.string.line_height_wide, 2.0f);
 
     companion object {
         fun fromValue(value: Float): LineHeightOption =

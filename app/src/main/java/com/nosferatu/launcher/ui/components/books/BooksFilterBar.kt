@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nosferatu.launcher.library.LibraryFilterTab
@@ -29,8 +30,8 @@ fun BooksFilterBar(
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            BooksScreenFilterTabItem("Libri", filter == LibraryFilterTab.ALL, onClick = { onFilterChange(LibraryFilterTab.ALL) })
-            BooksScreenFilterTabItem("Autori", filter == LibraryFilterTab.AUTHORS, onClick = { onFilterChange(LibraryFilterTab.AUTHORS) })
+            BooksScreenFilterTabItem(stringResource(id = com.nosferatu.launcher.R.string.tab_books), filter == LibraryFilterTab.ALL, onClick = { onFilterChange(LibraryFilterTab.ALL) })
+            BooksScreenFilterTabItem(stringResource(id = com.nosferatu.launcher.R.string.tab_authors), filter == LibraryFilterTab.AUTHORS, onClick = { onFilterChange(LibraryFilterTab.AUTHORS) })
             //TODO: add series and collections
         }
         Box(

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
 import com.nosferatu.launcher.data.EbookEntity
 import org.json.JSONObject
@@ -89,7 +90,7 @@ fun HomeReadingNowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$bookPercentage% LETTO",
+                text = stringResource(id = com.nosferatu.launcher.R.string.read_percent_format, bookPercentage),
                 fontSize = 12.sp,
                 color = Color.Black,
                 fontWeight = FontWeight.Medium

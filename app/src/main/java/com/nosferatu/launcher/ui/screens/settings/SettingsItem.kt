@@ -2,19 +2,19 @@ package com.nosferatu.launcher.ui.screens.settings
 
 data class SettingItem(
     val key: SettingKey,
-    val title: String,
-    val category: String
+    val titleRes: Int,
+    val categoryRes: Int
 )
 
 val settingsList = listOf(
-    SettingItem(SettingKey.FONT_CHOICE, "Carattere Predefinito", "Aspetto e Tipografia"),
-    SettingItem(SettingKey.FONT_SIZE, "Dimensioni Testo", "Aspetto e Tipografia"),
-    SettingItem(SettingKey.LINE_HEIGHT, "Interlinea", "Aspetto e Tipografia"),
-    SettingItem(SettingKey.PAGE_BORDERS, "Margini Pagina", "Aspetto e Tipografia"),
-    SettingItem(SettingKey.FORCE_BOLD, "Forza Grassetto", "Aspetto e Tipografia"),
-    SettingItem(SettingKey.INVERT_TOUCHES, "Modalità Inversione Tocchi", "Comportamento e Navigazione"),
-    SettingItem(SettingKey.VOLUME_KEYS, "Tasti Volume", "Comportamento e Navigazione"),
-    SettingItem(SettingKey.AUTOMATIC_SCAN, "Scansione Automatica", "Gestione Libreria"),
-    SettingItem(SettingKey.EXPORT_DATABASE, "Esporta Database", "Manutenzione"),
-    SettingItem(SettingKey.WIPE_LIBRARY, "Reset Libreria", "Manutenzione")
+    SettingItem(SettingKey.FONT_CHOICE, com.nosferatu.launcher.R.string.setting_font_choice, com.nosferatu.launcher.R.string.category_appearance),
+    SettingItem(SettingKey.FONT_SIZE, com.nosferatu.launcher.R.string.setting_font_size, com.nosferatu.launcher.R.string.category_appearance),
+    SettingItem(SettingKey.LINE_HEIGHT, com.nosferatu.launcher.R.string.setting_line_height, com.nosferatu.launcher.R.string.category_appearance),
+    SettingItem(SettingKey.PAGE_BORDERS, com.nosferatu.launcher.R.string.setting_page_borders, com.nosferatu.launcher.R.string.category_appearance),
+    SettingItem(SettingKey.FORCE_BOLD, com.nosferatu.launcher.R.string.setting_force_bold, com.nosferatu.launcher.R.string.category_appearance),
+    SettingItem(SettingKey.INVERT_TOUCHES, com.nosferatu.launcher.R.string.setting_invert_touches, com.nosferatu.launcher.R.string.category_navigation),
+    SettingItem(SettingKey.VOLUME_KEYS, com.nosferatu.launcher.R.string.setting_volume_keys, com.nosferatu.launcher.R.string.category_navigation),
+    SettingItem(SettingKey.AUTOMATIC_SCAN, com.nosferatu.launcher.R.string.setting_automatic_scan, com.nosferatu.launcher.R.string.category_library),
+    SettingItem(SettingKey.EXPORT_DATABASE, com.nosferatu.launcher.R.string.setting_export_database, com.nosferatu.launcher.R.string.category_maintenance),
+    SettingItem(SettingKey.WIPE_LIBRARY, com.nosferatu.launcher.R.string.setting_wipe_library, com.nosferatu.launcher.R.string.category_maintenance)
 )
