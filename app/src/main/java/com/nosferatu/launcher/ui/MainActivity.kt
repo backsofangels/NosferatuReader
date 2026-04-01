@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -43,6 +45,9 @@ import com.nosferatu.launcher.ui.screens.HomeScreen
 import androidx.core.net.toUri
 import com.nosferatu.launcher.library.LibraryConfig
 import com.nosferatu.launcher.library.LibraryFilterTab
+import com.nosferatu.launcher.ui.AppColors
+import com.nosferatu.launcher.ui.LocalAppColors
+import com.nosferatu.launcher.ui.appColorsFor
 import com.nosferatu.launcher.ui.screens.settings.SettingsScreen
 
 class MainActivity: AppCompatActivity() {
@@ -70,50 +75,64 @@ class MainActivity: AppCompatActivity() {
                 checkAndRequestPermissions()
             }
 
-            MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
-                Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .systemBarsPadding(),
-                    topBar = { CustomStatusBar() },
-                    bottomBar = {
-                        BottomBar(
-                            selectedTab = uiState.screenSelectionTab,
-                            onTabSelected = {
-                                tab -> viewModel.selectScreenTab(tab)
-                            }
-                        )
-                    }
-                ) { padding ->
-                    Box(modifier = Modifier.padding(padding)) {
-                        when (uiState.screenSelectionTab) {
-                            ScreenSelectionTab.Home -> HomeScreen(
-                                uiState,
-                                onOpenBook = { openBook(it) },
-                                onSyncClick = { viewModel.scanBooks() }
-                            )
-                            ScreenSelectionTab.MyBooks -> {
-                                Column {
-                                    BooksFilterBar(
-                                        uiState = uiState,
-                                        filter = uiState.booksFilterTab,
-                                        onFilterChange = { newFilter ->
-                                            viewModel.onFilterChange(newFilter)
-                                        }
-                                    )
-                                    BooksScreenLibraryList(
-                                        uiState,
-                                        onOpenBook = { openBook(it) },
-                                        onToggleAuthor = { author ->
-                                            viewModel.toggleAuthorExpansion(author)
-                                        }
-                                    )
+            val isDark = libraryConfig.backgroundMode.toInt() == 2
+            val colorScheme = if (isDark) {
+                darkColorScheme().copy(
+                    background = Color(0xFF222222),
+                    surface = Color(0xFF222222),
+                    onBackground = Color(0xFFEEEEEE),
+                    onSurface = Color(0xFFEEEEEE)
+                )
+            } else {
+                lightColorScheme(surface = Color.White)
+            }
+            val appColors = appColorsFor(libraryConfig.backgroundMode)
+            MaterialTheme(colorScheme = colorScheme) {
+                CompositionLocalProvider(LocalAppColors provides appColors) {
+                    Scaffold(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .systemBarsPadding(),
+                        topBar = { CustomStatusBar() },
+                        bottomBar = {
+                            BottomBar(
+                                selectedTab = uiState.screenSelectionTab,
+                                onTabSelected = {
+                                    tab -> viewModel.selectScreenTab(tab)
                                 }
+                            )
+                        }
+                    ) { padding ->
+                        Box(modifier = Modifier.padding(padding)) {
+                            when (uiState.screenSelectionTab) {
+                                ScreenSelectionTab.Home -> HomeScreen(
+                                    uiState,
+                                    onOpenBook = { openBook(it) },
+                                    onSyncClick = { viewModel.scanBooks() }
+                                )
+                                ScreenSelectionTab.MyBooks -> {
+                                    Column {
+                                        BooksFilterBar(
+                                            uiState = uiState,
+                                            filter = uiState.booksFilterTab,
+                                            onFilterChange = { newFilter ->
+                                                viewModel.onFilterChange(newFilter)
+                                            }
+                                        )
+                                        BooksScreenLibraryList(
+                                            uiState,
+                                            onOpenBook = { openBook(it) },
+                                            onToggleAuthor = { author ->
+                                                viewModel.toggleAuthorExpansion(author)
+                                            }
+                                        )
+                                    }
+                                }
+                                ScreenSelectionTab.More -> SettingsScreen(libraryConfig = libraryConfig)
                             }
-                            ScreenSelectionTab.More -> SettingsScreen(libraryConfig = libraryConfig)
                         }
                     }
-                }
+                } // CompositionLocalProvider
             }
         }
     }

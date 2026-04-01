@@ -20,6 +20,13 @@ import com.nosferatu.launcher.R
 import com.nosferatu.launcher.library.LibraryConfig
 import com.nosferatu.launcher.library.LibraryViewModel
 import com.nosferatu.launcher.library.LibraryViewModelFactory
+import com.nosferatu.launcher.ui.LocalAppColors
+import com.nosferatu.launcher.ui.appColorsFor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import com.nosferatu.launcher.ui.components.fontsettings.ReaderTextSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,6 +36,7 @@ import org.readium.r2.navigator.epub.EpubDefaults
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.shared.ExperimentalReadiumApi
@@ -68,6 +76,13 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Apply theme before inflation so all XML attr references resolve correctly
+        val bgMode = getSharedPreferences("library_prefs", MODE_PRIVATE).getFloat("background_mode", 0f)
+        when (bgMode.toInt()) {
+            1 -> setTheme(R.style.Theme_NosferatuReader_Cream)
+            2 -> setTheme(R.style.Theme_NosferatuReader_Dark)
+            else -> setTheme(R.style.Theme_NosferatuReader)
+        }
         setContentView(R.layout.activity_reader)
 
         // Setup UI Insets
@@ -111,7 +126,12 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 ).createFragmentFactory(
                     initialPreferences = EpubPreferences(
                         fontSize = libraryConfig.fontSizeScale.toDouble(),
-                        lineHeight = libraryConfig.lineHeightFactor.toDouble()
+                        lineHeight = libraryConfig.lineHeightFactor.toDouble(),
+                        theme = when (libraryConfig.backgroundMode.toInt()) {
+                            1 -> Theme.SEPIA
+                            2 -> Theme.DARK
+                            else -> Theme.LIGHT
+                        }
                     ),
                     initialLocator = initialLocator,
                     listener = this@ReaderActivity
@@ -152,17 +172,31 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val btnToggle = findViewById<View>(R.id.btn_font_settings)
 
         settingsContainer.setContent {
-            // Applica il tema della tua app se necessario
-            ReaderTextSettings(
-                libraryConfig = libraryConfig,
-                onPreferenceChanged = { applyReaderPreferences() }
-            )
+            val appColors = appColorsFor(libraryConfig.backgroundMode)
+            val isDark = libraryConfig.backgroundMode.toInt() == 2
+            val colorScheme = if (isDark) {
+                darkColorScheme().copy(
+                    background = Color(0xFF222222),
+                    surface = Color(0xFF222222),
+                    onBackground = Color(0xFFEEEEEE),
+                    onSurface = Color(0xFFEEEEEE)
+                )
+            } else {
+                lightColorScheme(surface = Color.White)
+            }
+            MaterialTheme(colorScheme = colorScheme) {
+                CompositionLocalProvider(LocalAppColors provides appColors) {
+                    ReaderTextSettings(
+                        libraryConfig = libraryConfig,
+                        onPreferenceChanged = { applyReaderPreferences() }
+                    )
+                }
+            }
         }
 
         btnToggle.setOnClickListener {
             isFontBarVisible = !isFontBarVisible
             settingsContainer.visibility = if (isFontBarVisible) View.VISIBLE else View.GONE
-            btnToggle.rotation = if (isFontBarVisible) 45f else 0f
         }
     }
 
@@ -171,7 +205,12 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
         val newPreferences = EpubPreferences(
             fontSize = libraryConfig.fontSizeScale.toDouble(),
-            lineHeight = libraryConfig.lineHeightFactor.toDouble()
+            lineHeight = libraryConfig.lineHeightFactor.toDouble(),
+            theme = when (libraryConfig.backgroundMode.toInt()) {
+                1 -> Theme.SEPIA
+                2 -> Theme.DARK
+                else -> Theme.LIGHT
+            }
         )
 
         Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, LH=${newPreferences.lineHeight}")

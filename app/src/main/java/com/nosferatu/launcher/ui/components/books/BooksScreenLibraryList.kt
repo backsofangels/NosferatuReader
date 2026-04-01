@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryFilterTab
 import com.nosferatu.launcher.ui.states.LibraryUiState
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun BooksScreenLibraryList(
@@ -26,7 +27,7 @@ fun BooksScreenLibraryList(
     onOpenBook: (EbookEntity) -> Unit,
     onToggleAuthor: (String) -> Unit
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    LazyColumn(modifier = Modifier.fillMaxSize().background(LocalAppColors.current.bg)) {
         when (state.booksFilterTab) {
             LibraryFilterTab.AUTHORS -> {
                 val groupedBooks = state.books.groupBy { it.author ?: "Autore Sconosciuto" }

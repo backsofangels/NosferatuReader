@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nosferatu.launcher.library.LibraryFilterTab
 import com.nosferatu.launcher.ui.states.LibraryUiState
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun BooksFilterBar(
@@ -22,7 +23,8 @@ fun BooksFilterBar(
     filter: LibraryFilterTab,
     onFilterChange: (LibraryFilterTab) -> Unit
 ) {
-    Column(modifier = Modifier.background(Color.White)) {
+    val colors = LocalAppColors.current
+    Column(modifier = Modifier.background(colors.bg)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -38,7 +40,7 @@ fun BooksFilterBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(Color.Black)
+                .background(LocalAppColors.current.onBg.copy(alpha = 0.3f))
         )
     }
 }
