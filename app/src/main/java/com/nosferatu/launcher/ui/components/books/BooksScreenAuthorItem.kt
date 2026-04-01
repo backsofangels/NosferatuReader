@@ -17,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nosferatu.launcher.R
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun BooksScreenAuthorItem(
@@ -35,7 +36,7 @@ fun BooksScreenAuthorItem(
         Text(
             text = author.uppercase(),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-            color = Color.Black
+            color = LocalAppColors.current.onBg
         )
         Icon(
             painter = painterResource(
@@ -43,7 +44,7 @@ fun BooksScreenAuthorItem(
             ),
             contentDescription = null,
             modifier = Modifier.size(24.dp),
-            tint = Color.Black
+            tint = LocalAppColors.current.onBg
         )
     }
 }

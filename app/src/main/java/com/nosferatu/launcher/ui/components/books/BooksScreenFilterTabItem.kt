@@ -7,6 +7,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun BooksScreenFilterTabItem(
@@ -18,7 +19,7 @@ fun BooksScreenFilterTabItem(
         style = TextStyle(
             fontSize = 14.sp,
             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-            color = if (active) Color.Black else Color.Gray
+            color = if (active) LocalAppColors.current.onBg else LocalAppColors.current.onBg.copy(alpha = 0.5f)
         ),
         onClick = { onClick() }
     )

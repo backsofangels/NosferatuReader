@@ -28,6 +28,10 @@
     <string name="setting_automatic_scan">Scansione Automatica</string>
     <string name="setting_export_database">Esporta Database</string>
     <string name="setting_wipe_library">Reset Libreria</string>
+    <string name="setting_background_color">Colore Sfondo</string>
+    <string name="color_white">Bianco</string>
+    <string name="color_cream">Panna</string>
+    <string name="color_black">Nero</string>
     <!-- Settings categories -->
     <string name="category_appearance">Aspetto e Tipografia</string>
     <string name="category_navigation">Comportamento e Navigazione</string>

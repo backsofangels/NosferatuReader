@@ -17,6 +17,7 @@ class LibraryConfig(private val context: Context) {
 
     companion object {
         private const val KEY_ROOT_PATH = "root_path"
+        private const val KEY_BACKGROUND_MODE = "background_mode"
         private const val KEY_FONT_SIZE = "font_size_scale"
         private const val KEY_LINE_HEIGHT = "line_height_factor"
         private const val KEY_PAGE_MARGINS = "page_margins"
@@ -24,6 +25,7 @@ class LibraryConfig(private val context: Context) {
         private const val DEFAULT_FONT_SIZE = 1.1f
         private const val DEFAULT_LINE_HEIGHT = 1.5f
         private const val DEFAULT_PAGE_MARGINS = 1.0f
+        private const val DEFAULT_BACKGROUND_MODE = 0.0f // 0 = bianco, 1 = panna, 2 = nero
     }
 
     var rootPath: String
@@ -69,5 +71,14 @@ class LibraryConfig(private val context: Context) {
     fun updatePageMargins(newValue: Float) {
         pageMargins = newValue
         prefs.edit().putFloat(KEY_PAGE_MARGINS, newValue).apply()
+    }
+
+    var backgroundMode by mutableFloatStateOf(prefs.getFloat(KEY_BACKGROUND_MODE, DEFAULT_BACKGROUND_MODE))
+        private set
+
+    fun updateBackgroundMode(newValue: Float) {
+        backgroundMode = newValue
+        prefs.edit().putFloat(KEY_BACKGROUND_MODE, newValue).apply()
+        Log.d(TAG, "Background mode aggiornato e salvato: $newValue")
     }
 }

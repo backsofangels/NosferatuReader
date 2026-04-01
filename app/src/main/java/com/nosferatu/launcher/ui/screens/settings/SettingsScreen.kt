@@ -18,6 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nosferatu.launcher.library.LibraryConfig
+import com.nosferatu.launcher.ui.LocalAppColors
+import com.nosferatu.launcher.ui.bgColorFor
+import com.nosferatu.launcher.ui.contentColorFor
 import kotlin.math.abs
 
 sealed class SettingsNavigation {
@@ -29,16 +32,18 @@ sealed class SettingsNavigation {
 fun SettingsScreen(libraryConfig: LibraryConfig) {
     var currentNav by remember { mutableStateOf<SettingsNavigation>(SettingsNavigation.Main) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    val colors = LocalAppColors.current
+
+    Box(modifier = Modifier.fillMaxSize().background(colors.bg)) {
         when (val nav = currentNav) {
             is SettingsNavigation.Main -> {
                 SettingsMainList(onNavigate = { key ->
                     when (key) {
-                        SettingKey.FONT_SIZE, SettingKey.LINE_HEIGHT ->
+                        SettingKey.FONT_SIZE, SettingKey.LINE_HEIGHT, SettingKey.BACKGROUND_COLOR ->
                             currentNav = SettingsNavigation.SubMenu(key)
                         else -> Log.d("Settings", "Azione per $key")
                     }
-                })
+                }, contentColor = colors.onBg)
             }
 
             is SettingsNavigation.SubMenu -> {
@@ -61,6 +66,15 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
                         onBack = { currentNav = SettingsNavigation.Main },
                         onSelect = { libraryConfig.updateLineHeight(it.value) }
                     )
+                    SettingKey.BACKGROUND_COLOR -> SelectionSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_background_color),
+                        currentValue = libraryConfig.backgroundMode,
+                        options = BackgroundColorOption.entries.toTypedArray(),
+                        getLabelRes = { it.labelRes },
+                        getValue = { it.value },
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateBackgroundMode(it.value) }
+                    )
                     else -> currentNav = SettingsNavigation.Main
                 }
             }
@@ -78,15 +92,19 @@ fun <T> SelectionSubMenu(
     onBack: () -> Unit,
     onSelect: (T) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    // derive colors from current app background setting via library config value
+    val bg = bgColorFor(currentValue)
+    val contentColor = contentColorFor(currentValue)
+
+    Column(modifier = Modifier.fillMaxSize().background(bg)) {
         Row(
             modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black)
-            Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black)
+            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black, color = contentColor)
+            Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = contentColor)
         }
-        HorizontalDivider(thickness = 1.dp, color = Color.Black)
+        HorizontalDivider(thickness = 1.dp, color = contentColor.copy(alpha = 0.2f))
 
         options.forEach { option ->
             val isSelected = abs(getValue(option) - currentValue) < 0.01f
@@ -96,18 +114,18 @@ fun <T> SelectionSubMenu(
                         text = stringResource(id = getLabelRes(option)),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) Color.Black else Color.DarkGray
+                        color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)
                     )
-                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black)
+                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black, color = contentColor)
                 }
             }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
         }
     }
 }
 
 @Composable
-private fun SettingsMainList(onNavigate: (SettingKey) -> Unit) {
+private fun SettingsMainList(onNavigate: (SettingKey) -> Unit, contentColor: Color) {
     val groupedSettings = settingsList.groupBy { it.categoryRes }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         groupedSettings.forEach { (category, items) ->
@@ -115,14 +133,15 @@ private fun SettingsMainList(onNavigate: (SettingKey) -> Unit) {
                 Text(
                     text = stringResource(id = category).uppercase(),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black, fontSize = 12.sp),
+                    color = contentColor,
                     modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 8.dp)
                 )
             }
             itemsIndexed(items) { index, setting ->
                 Column(modifier = Modifier.fillMaxWidth().clickable { onNavigate(setting.key) }.padding(16.dp)) {
-                    Text(text = stringResource(id = setting.titleRes), color = Color.DarkGray)
+                    Text(text = stringResource(id = setting.titleRes), color = contentColor.copy(alpha = 0.87f))
                 }
-                if (index < items.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                if (index < items.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
             }
         }
     }

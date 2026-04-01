@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun HomeSection(
@@ -24,7 +25,7 @@ fun HomeSection(
         Text(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelLarge,
-            color = Color.Black,
+            color = LocalAppColors.current.onBg,
             modifier = Modifier
                 .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
         )

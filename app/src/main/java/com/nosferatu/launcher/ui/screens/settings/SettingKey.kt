@@ -1,6 +1,7 @@
 package com.nosferatu.launcher.ui.screens.settings
 
 enum class SettingKey {
+    BACKGROUND_COLOR,
     FONT_SIZE,
     LINE_HEIGHT,
     FONT_CHOICE,

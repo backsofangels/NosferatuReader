@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import coil.compose.AsyncImage
 import com.nosferatu.launcher.data.EbookEntity
+import com.nosferatu.launcher.ui.LocalAppColors
 import org.json.JSONObject
 import java.io.File
 
@@ -59,11 +60,12 @@ fun HomeReadingNowItem(
             .clickable(onClick = onClick)
             .padding(4.dp)
     ) {
+        val colors = LocalAppColors.current
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.7f)
-                .border(1.dp, Color.Black)
+                .border(1.dp, colors.onBg.copy(alpha = 0.5f))
         ) {
             if (book.coverPath != null) {
                 AsyncImage(
@@ -78,7 +80,7 @@ fun HomeReadingNowItem(
                     modifier = Modifier.padding(12.dp).align(Alignment.Center),
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center,
-                    color = Color.Black
+                    color = colors.onBg
                 )
             }
         }
@@ -92,7 +94,7 @@ fun HomeReadingNowItem(
             Text(
                 text = stringResource(id = com.nosferatu.launcher.R.string.read_percent_format, bookPercentage),
                 fontSize = 12.sp,
-                color = Color.Black,
+                color = colors.onBg,
                 fontWeight = FontWeight.Medium
             )
         }

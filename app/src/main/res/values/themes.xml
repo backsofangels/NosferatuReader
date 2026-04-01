@@ -5,6 +5,11 @@
         <item name="readerTextColor">@color/reader_text_light</item>
     </style>
 
+    <style name="Theme.NosferatuReader.Cream">
+        <item name="readerBackgroundColor">@color/reader_bg_cream</item>
+        <item name="readerTextColor">@color/reader_text_cream</item>
+    </style>
+
     <style name="Theme.NosferatuReader.Dark">
         <item name="readerBackgroundColor">@color/reader_bg_dark</item>
         <item name="readerTextColor">@color/reader_text_dark</item>

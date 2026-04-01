@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.nosferatu.launcher.data.EbookEntity
 import java.io.File
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun BooksScreenBookItem(
@@ -42,7 +43,7 @@ fun BooksScreenBookItem(
             modifier = Modifier
                 .width(55.dp)
                 .aspectRatio(0.75f)
-                .border(0.5.dp, Color.Black)
+                .border(0.5.dp, LocalAppColors.current.onBg.copy(alpha = 0.4f))
         ) {
             if (book.coverPath != null) {
                 AsyncImage(
@@ -88,9 +89,9 @@ fun BooksScreenBookItem(
                 text = if (isNew) stringResource(id = com.nosferatu.launcher.R.string.status_unread) else stringResource(id = com.nosferatu.launcher.R.string.status_reading),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (isNew) Color.Black else Color.DarkGray
+                color = if (isNew) LocalAppColors.current.onBg else LocalAppColors.current.onBg.copy(alpha = 0.6f)
             )
-            Text(text = book.format, fontSize = 10.sp, color = Color.LightGray)
+            Text(text = book.format, fontSize = 10.sp, color = LocalAppColors.current.onBg.copy(alpha = 0.4f))
         }
     }
 }

@@ -16,5 +16,6 @@ val settingsList = listOf(
     SettingItem(SettingKey.VOLUME_KEYS, com.nosferatu.launcher.R.string.setting_volume_keys, com.nosferatu.launcher.R.string.category_navigation),
     SettingItem(SettingKey.AUTOMATIC_SCAN, com.nosferatu.launcher.R.string.setting_automatic_scan, com.nosferatu.launcher.R.string.category_library),
     SettingItem(SettingKey.EXPORT_DATABASE, com.nosferatu.launcher.R.string.setting_export_database, com.nosferatu.launcher.R.string.category_maintenance),
+    SettingItem(SettingKey.BACKGROUND_COLOR, com.nosferatu.launcher.R.string.setting_background_color, com.nosferatu.launcher.R.string.category_appearance),
     SettingItem(SettingKey.WIPE_LIBRARY, com.nosferatu.launcher.R.string.setting_wipe_library, com.nosferatu.launcher.R.string.category_maintenance)
 )

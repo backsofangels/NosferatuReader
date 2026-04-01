@@ -23,3 +23,14 @@ enum class LineHeightOption(val labelRes: Int, val value: Float) {
             entries.find { abs(it.value - value) < 0.01f } ?: MEDIUM
     }
 }
+
+enum class BackgroundColorOption(val labelRes: Int, val value: Float) {
+    WHITE(com.nosferatu.launcher.R.string.color_white, 0.0f),
+    CREAM(com.nosferatu.launcher.R.string.color_cream, 1.0f),
+    BLACK(com.nosferatu.launcher.R.string.color_black, 2.0f);
+
+    companion object {
+        fun fromValue(value: Float): BackgroundColorOption =
+            entries.find { abs(it.value - value) < 0.01f } ?: WHITE
+    }
+}
