@@ -6,6 +6,7 @@ build/
 
 # Local configuration file (sdk path, etc)
 local.properties
+build-run.ps1
 
 # Log/OS Files
 *.log
