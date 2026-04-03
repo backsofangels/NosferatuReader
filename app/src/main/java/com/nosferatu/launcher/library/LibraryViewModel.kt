@@ -61,7 +61,9 @@ class LibraryViewModel(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        // Use Eagerly so StateFlow starts collecting immediately in JVM unit tests
+        // (avoids tests needing to subscribe to observe uiState updates).
+        started = SharingStarted.Eagerly,
         initialValue = LibraryUiState()
     )
 
@@ -73,6 +75,10 @@ class LibraryViewModel(
             current + author
         }
     }
+
+    // Testing helpers: synchronous accessors for unit tests to avoid relying on flow collection timing
+    fun getExpandedAuthorsForTests(): Set<String> = _expandedAuthors.value
+    fun getScreenSelectionTabForTests(): ScreenSelectionTab = _screenSelectionTab.value
 
     fun onFilterChange(filter: LibraryFilterTab) {
         _booksFilterTab.value = filter

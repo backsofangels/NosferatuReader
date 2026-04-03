@@ -23,7 +23,15 @@ class LibraryConfig(private val context: Context) {
         private const val KEY_FORCE_BOLD = "force_bold"
         private const val KEY_VOLUME_KEYS = "volume_keys"
         private const val KEY_INVERT_TOUCHES = "invert_touches"
-        private val DEFAULT_PATH = Environment.getExternalStorageDirectory().absolutePath
+        // Avoid accessing Android Environment at class initialization time so JVM unit tests
+        // can instantiate/mocking this class without triggering Android API calls.
+        private val DEFAULT_PATH: String
+            get() = try {
+                Environment.getExternalStorageDirectory().absolutePath
+            } catch (t: Throwable) {
+                // Fallback to user home on non-Android environments (tests)
+                System.getProperty("user.home") ?: "/"
+            }
         private const val DEFAULT_FONT_SIZE = 1.1f
         private const val DEFAULT_BACKGROUND_MODE = 0.0f // 0 = bianco, 1 = panna, 2 = nero
     }

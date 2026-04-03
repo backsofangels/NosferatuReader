@@ -53,6 +53,8 @@ import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.epub.EpubParser
 import java.io.File
+import com.nosferatu.launcher.reader.TestReaderInjector
+import com.nosferatu.launcher.reader.TestNavigatorFragment
 
 @OptIn(ExperimentalReadiumApi::class)
 class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
@@ -108,6 +110,40 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val bookPath = intent.getStringExtra("BOOK_PATH") ?: return finish()
         val lastLocationJson = intent.getStringExtra("LAST_LOCATION_JSON")
         bookId = intent.getLongExtra("BOOK_ID", -1)
+
+        // If tests enabled fake navigator, avoid initializing Readium and populate minimal UI
+        if (TestReaderInjector.useFakeNavigator) {
+            // Insert a minimal test fragment so the layout has content
+            if (savedInstanceState == null) {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.reader_container, TestNavigatorFragment(), "EpubNavigator")
+                    .commitNow()
+            }
+
+            // Populate header/footer with supplied test metadata
+            val testTitle = intent.getStringExtra("BOOK_TITLE") ?: TestReaderInjector.fakeTitle ?: ""
+            val testAuthor = intent.getStringExtra("BOOK_AUTHOR") ?: TestReaderInjector.fakeAuthor ?: ""
+            findViewById<TextView>(R.id.menu_book_title).text = testTitle.uppercase()
+            findViewById<TextView>(R.id.menu_book_author).text = testAuthor
+
+            // Observe TestNavigatorFragment locator updates and update UI accordingly
+            val testNavigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? TestNavigatorFragment
+            if (testNavigator != null) {
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        testNavigator.currentLocator.collect { locator ->
+                            if (locator != null) {
+                                _lastKnownLocator = locator
+                                updateUiWithLocator(locator)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Skip Readium initialization in test mode
+            return
+        }
 
         lifecycleScope.launch {
             try {
@@ -203,7 +239,9 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     }
 
     private fun applyReaderPreferences() {
-        val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+        val fragment = supportFragmentManager.findFragmentByTag("EpubNavigator")
+        val navigator = fragment as? EpubNavigatorFragment
+        val testNavigator = fragment as? TestNavigatorFragment
 
         val newPreferences = EpubPreferences(
             fontSize = libraryConfig.fontSizeScale.toDouble(),
@@ -219,14 +257,15 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
         Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, Bold=${libraryConfig.forceBold}, PublisherStyles=${newPreferences.publisherStyles}")
         navigator?.submitPreferences(newPreferences)
+        testNavigator?.submitPreferences(newPreferences)
     }
 
     private fun updateUiWithLocator(locator: Locator) {
         val chapterTitle = locator.title ?: ""
         val progression = locator.locations.totalProgression ?: 0.0
         val percent = (progression * 100).toInt().coerceIn(0, 100)
-        val bookTitle = publication?.metadata?.title?.uppercase() ?: ""
-        val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name
+        val bookTitle = publication?.metadata?.title?.uppercase() ?: (TestReaderInjector.fakeTitle?.uppercase() ?: "")
+        val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name ?: TestReaderInjector.fakeAuthor
 
         findViewById<TextView>(R.id.immersive_header_title).text = chapterTitle.uppercase()
         findViewById<TextView>(R.id.immersive_footer_text).text = getString(com.nosferatu.launcher.R.string.reader_footer_format, bookTitle, percent)

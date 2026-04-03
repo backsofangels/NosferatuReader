@@ -5,6 +5,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// JaCoCo for unit test coverage reporting
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.8.10"
+}
+
 android {
     namespace 'com.nosferatu.launcher'
     compileSdkVersion 36
@@ -15,6 +22,8 @@ android {
         targetSdkVersion 36
         versionCode 1
         versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
@@ -40,6 +49,13 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
+    }
+
+    testOptions {
+        unitTests.all {
+            // Byte Buddy in the Mockito inline mock maker needs this on Java 21
+            it.jvmArgs += '-Dnet.bytebuddy.experimental=true'
+        }
     }
 }
 
@@ -92,4 +108,52 @@ dependencies {
     // Coroutines
     implementation libs.kotlinx.coroutines.core
     implementation libs.kotlinx.coroutines.android
+
+    // Unit test dependencies
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
+    testImplementation 'org.mockito:mockito-inline:4.11.0'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:4.1.0'
+    // Instrumented UI test dependencies
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.5.1'
+    // Use Compose BOM for androidTest to resolve compose test artifact versions
+    androidTestImplementation platform(libs.androidx.compose.bom)
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    // Robolectric for JVM Android unit tests and Room testing helpers
+    testImplementation 'androidx.test:core:1.5.0'
+    testImplementation 'org.robolectric:robolectric:4.10.3'
+    testImplementation 'androidx.room:room-testing:2.8.4'
+}
+
+// Configure a simple JaCoCo report task for the debug unit tests
+task jacocoTestReport(type: JacocoReport) {
+    dependsOn 'testDebugUnitTest'
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports for debug unit tests"
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    def fileFilter = ['**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*', '**/*Test*.*']
+
+    def kotlinClassesDir = fileTree(dir: "${buildDir}/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def javaClassesDir = fileTree(dir: "${buildDir}/intermediates/javac/debug/classes", excludes: fileFilter)
+    classDirectories.setFrom(files([kotlinClassesDir, javaClassesDir]))
+
+    sourceDirectories.setFrom(files(['src/main/java', 'src/main/kotlin']))
+
+    executionData.setFrom(fileTree(dir: project.buildDir, includes: [
+        'jacoco/testDebugUnitTest.exec',
+        'outputs/unit_test_code_coverage/debugUnitTest/*',
+        'testDebugUnitTest.exec'
+    ]))
 }
