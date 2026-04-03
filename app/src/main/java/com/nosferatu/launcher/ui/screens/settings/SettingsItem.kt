@@ -9,8 +9,6 @@ data class SettingItem(
 val settingsList = listOf(
     SettingItem(SettingKey.FONT_CHOICE, com.nosferatu.launcher.R.string.setting_font_choice, com.nosferatu.launcher.R.string.category_appearance),
     SettingItem(SettingKey.FONT_SIZE, com.nosferatu.launcher.R.string.setting_font_size, com.nosferatu.launcher.R.string.category_appearance),
-    SettingItem(SettingKey.LINE_HEIGHT, com.nosferatu.launcher.R.string.setting_line_height, com.nosferatu.launcher.R.string.category_appearance),
-    SettingItem(SettingKey.PAGE_BORDERS, com.nosferatu.launcher.R.string.setting_page_borders, com.nosferatu.launcher.R.string.category_appearance),
     SettingItem(SettingKey.FORCE_BOLD, com.nosferatu.launcher.R.string.setting_force_bold, com.nosferatu.launcher.R.string.category_appearance),
     SettingItem(SettingKey.INVERT_TOUCHES, com.nosferatu.launcher.R.string.setting_invert_touches, com.nosferatu.launcher.R.string.category_navigation),
     SettingItem(SettingKey.VOLUME_KEYS, com.nosferatu.launcher.R.string.setting_volume_keys, com.nosferatu.launcher.R.string.category_navigation),

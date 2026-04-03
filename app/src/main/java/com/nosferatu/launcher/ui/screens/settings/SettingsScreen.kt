@@ -19,8 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nosferatu.launcher.library.LibraryConfig
 import com.nosferatu.launcher.ui.LocalAppColors
-import com.nosferatu.launcher.ui.bgColorFor
-import com.nosferatu.launcher.ui.contentColorFor
 import kotlin.math.abs
 
 sealed class SettingsNavigation {
@@ -39,8 +37,8 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
             is SettingsNavigation.Main -> {
                 SettingsMainList(onNavigate = { key ->
                     when (key) {
-                        SettingKey.FONT_SIZE, SettingKey.LINE_HEIGHT, SettingKey.BACKGROUND_COLOR,
-                        SettingKey.FORCE_BOLD, SettingKey.VOLUME_KEYS ->
+                        SettingKey.FONT_SIZE, SettingKey.BACKGROUND_COLOR,
+                        SettingKey.FORCE_BOLD, SettingKey.VOLUME_KEYS, SettingKey.INVERT_TOUCHES ->
                             currentNav = SettingsNavigation.SubMenu(key)
                         else -> Log.d("Settings", "Azione per $key")
                     }
@@ -57,15 +55,6 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
                         getValue = { it.value },
                         onBack = { currentNav = SettingsNavigation.Main },
                         onSelect = { libraryConfig.updateFontSize(it.value) }
-                    )
-                    SettingKey.LINE_HEIGHT -> SelectionSubMenu(
-                        title = stringResource(id = com.nosferatu.launcher.R.string.line_height_title),
-                        currentValue = libraryConfig.lineHeightFactor,
-                        options = LineHeightOption.entries.toTypedArray(),
-                        getLabelRes = { it.labelRes },
-                        getValue = { it.value },
-                        onBack = { currentNav = SettingsNavigation.Main },
-                        onSelect = { libraryConfig.updateLineHeight(it.value) }
                     )
                     SettingKey.BACKGROUND_COLOR -> SelectionSubMenu(
                         title = stringResource(id = com.nosferatu.launcher.R.string.setting_background_color),
@@ -88,6 +77,12 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
                         onBack = { currentNav = SettingsNavigation.Main },
                         onSelect = { libraryConfig.updateVolumeKeys(it) }
                     )
+                    SettingKey.INVERT_TOUCHES -> BooleanSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_invert_touches),
+                        currentValue = libraryConfig.invertTouches,
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateInvertTouches(it) }
+                    )
                     else -> currentNav = SettingsNavigation.Main
                 }
             }
@@ -105,9 +100,9 @@ fun <T> SelectionSubMenu(
     onBack: () -> Unit,
     onSelect: (T) -> Unit
 ) {
-    // derive colors from current app background setting via library config value
-    val bg = bgColorFor(currentValue)
-    val contentColor = contentColorFor(currentValue)
+    // use the actual app theme colours, not derived from the setting value
+    val bg = LocalAppColors.current.bg
+    val contentColor = LocalAppColors.current.onBg
 
     Column(modifier = Modifier.fillMaxSize().background(bg)) {
         Row(

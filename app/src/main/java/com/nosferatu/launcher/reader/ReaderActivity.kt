@@ -121,17 +121,14 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 val navigatorFactory = EpubNavigatorFactory(
                     publication = publication!!,
                     configuration = EpubNavigatorFactory.Configuration(
-                        defaults = EpubDefaults(
-                            pageMargins = 1.0,
-                            lineHeight = libraryConfig.lineHeightFactor.toDouble()
-                        )
+                        defaults = EpubDefaults()
                     )
                 ).createFragmentFactory(
                     initialPreferences = EpubPreferences(
                         fontSize = libraryConfig.fontSizeScale.toDouble(),
-                        lineHeight = libraryConfig.lineHeightFactor.toDouble(),
                         fontWeight = if (libraryConfig.forceBold) 2.0 else null,
                         columnCount = ColumnCount.ONE,
+                        publisherStyles = true,
                         theme = when (libraryConfig.backgroundMode.toInt()) {
                             1 -> Theme.SEPIA
                             2 -> Theme.DARK
@@ -210,9 +207,9 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
         val newPreferences = EpubPreferences(
             fontSize = libraryConfig.fontSizeScale.toDouble(),
-            lineHeight = libraryConfig.lineHeightFactor.toDouble(),
             fontWeight = if (libraryConfig.forceBold) 2.0 else null,
             columnCount = ColumnCount.ONE,
+            publisherStyles = true,
             theme = when (libraryConfig.backgroundMode.toInt()) {
                 1 -> Theme.SEPIA
                 2 -> Theme.DARK
@@ -220,7 +217,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             }
         )
 
-        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, LH=${newPreferences.lineHeight}, Bold=${libraryConfig.forceBold}")
+        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, Bold=${libraryConfig.forceBold}, PublisherStyles=${newPreferences.publisherStyles}")
         navigator?.submitPreferences(newPreferences)
     }
 
@@ -340,7 +337,14 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
             if (isCenter) { toggleMenu(); return true }
             if (isMenuVisible) { toggleMenu(); return true }
-            return false
+
+            // Side tap navigation — left/right zones swappable via invertTouches
+            val tapRight = point.x > screenWidth * 0.5f
+            val goForward = if (libraryConfig.invertTouches) !tapRight else tapRight
+            val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+                ?: return false
+            lifecycleScope.launch { navigateByOnePage(navigator, goForward) }
+            return true
         }
     }
 

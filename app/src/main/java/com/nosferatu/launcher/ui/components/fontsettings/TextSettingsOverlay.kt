@@ -33,7 +33,6 @@ fun ReaderTextSettings(
             .background(colors.bg)
             .padding(24.dp)
     ) {
-        // 1. Dimensione Testo: range tipico e-reader 0.5f - 2.5f
         SliderRow(
             label = stringResource(id = R.string.dimension_label),
             currentValue = libraryConfig.fontSizeScale,
