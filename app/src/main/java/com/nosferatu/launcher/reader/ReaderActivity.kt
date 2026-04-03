@@ -2,6 +2,7 @@ package com.nosferatu.launcher.reader
 
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -36,6 +37,7 @@ import org.readium.r2.navigator.epub.EpubDefaults
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.ColumnCount
 import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
@@ -43,6 +45,7 @@ import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.locateProgression
+import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.getOrElse
@@ -127,6 +130,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                     initialPreferences = EpubPreferences(
                         fontSize = libraryConfig.fontSizeScale.toDouble(),
                         lineHeight = libraryConfig.lineHeightFactor.toDouble(),
+                        fontWeight = if (libraryConfig.forceBold) 2.0 else null,
+                        columnCount = ColumnCount.ONE,
                         theme = when (libraryConfig.backgroundMode.toInt()) {
                             1 -> Theme.SEPIA
                             2 -> Theme.DARK
@@ -206,6 +211,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val newPreferences = EpubPreferences(
             fontSize = libraryConfig.fontSizeScale.toDouble(),
             lineHeight = libraryConfig.lineHeightFactor.toDouble(),
+            fontWeight = if (libraryConfig.forceBold) 2.0 else null,
+            columnCount = ColumnCount.ONE,
             theme = when (libraryConfig.backgroundMode.toInt()) {
                 1 -> Theme.SEPIA
                 2 -> Theme.DARK
@@ -213,7 +220,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             }
         )
 
-        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, LH=${newPreferences.lineHeight}")
+        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, LH=${newPreferences.lineHeight}, Bold=${libraryConfig.forceBold}")
         navigator?.submitPreferences(newPreferences)
     }
 
@@ -339,4 +346,35 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     override fun onJumpToLocator(locator: Locator) { _lastKnownLocator = locator }
     @ExperimentalReadiumApi override fun onExternalLinkActivated(url: AbsoluteUrl) { /* do nothing */ }
+
+    private suspend fun navigateByOnePage(navigator: EpubNavigatorFragment, forward: Boolean) {
+        val pub = publication ?: return
+        val allPositions = pub.positions()
+        if (allPositions.isEmpty()) {
+            if (forward) navigator.goForward(animated = true) else navigator.goBackward(animated = true)
+            return
+        }
+        val currentProgression = _lastKnownLocator?.locations?.totalProgression ?: 0.0
+        val currentIndex = allPositions.indexOfLast { (it.locations.totalProgression ?: 0.0) <= currentProgression + 0.0001 }
+        val safeIndex = if (currentIndex < 0) 0 else currentIndex
+        val targetIndex = if (forward) safeIndex + 1 else safeIndex - 1
+        val target = allPositions.getOrNull(targetIndex.coerceIn(0, allPositions.lastIndex)) ?: return
+        navigator.go(target, animated = false)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (libraryConfig.volumeKeys && event.action == KeyEvent.ACTION_DOWN) {
+            val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+            if (navigator != null) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                        val forward = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                        lifecycleScope.launch { navigateByOnePage(navigator, forward) }
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
 }

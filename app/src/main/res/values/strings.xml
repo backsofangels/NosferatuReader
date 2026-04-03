@@ -51,6 +51,9 @@
     <string name="line_height_narrow">Stretta</string>
     <string name="line_height_normal">Normale</string>
     <string name="line_height_wide">Ampia</string>
+    <string name="force_bold_title">Forza Grassetto</string>
+    <string name="option_enabled">Abilitato</string>
+    <string name="option_disabled">Disabilitato</string>
     <string name="percent_format">%1$d%%</string>
     <string name="reader_footer_format">%1$s - %2$d%%</string>
 </resources>

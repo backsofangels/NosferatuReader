@@ -39,7 +39,8 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
             is SettingsNavigation.Main -> {
                 SettingsMainList(onNavigate = { key ->
                     when (key) {
-                        SettingKey.FONT_SIZE, SettingKey.LINE_HEIGHT, SettingKey.BACKGROUND_COLOR ->
+                        SettingKey.FONT_SIZE, SettingKey.LINE_HEIGHT, SettingKey.BACKGROUND_COLOR,
+                        SettingKey.FORCE_BOLD, SettingKey.VOLUME_KEYS ->
                             currentNav = SettingsNavigation.SubMenu(key)
                         else -> Log.d("Settings", "Azione per $key")
                     }
@@ -74,6 +75,18 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
                         getValue = { it.value },
                         onBack = { currentNav = SettingsNavigation.Main },
                         onSelect = { libraryConfig.updateBackgroundMode(it.value) }
+                    )
+                    SettingKey.FORCE_BOLD -> BooleanSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.force_bold_title),
+                        currentValue = libraryConfig.forceBold,
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateForceBold(it) }
+                    )
+                    SettingKey.VOLUME_KEYS -> BooleanSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_volume_keys),
+                        currentValue = libraryConfig.volumeKeys,
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateVolumeKeys(it) }
                     )
                     else -> currentNav = SettingsNavigation.Main
                 }
@@ -112,6 +125,49 @@ fun <T> SelectionSubMenu(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         text = stringResource(id = getLabelRes(option)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)
+                    )
+                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black, color = contentColor)
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
+        }
+    }
+}
+
+@Composable
+fun BooleanSubMenu(
+    title: String,
+    currentValue: Boolean,
+    onBack: () -> Unit,
+    onSelect: (Boolean) -> Unit
+) {
+    val bg = LocalAppColors.current.bg
+    val contentColor = LocalAppColors.current.onBg
+
+    val options = listOf(
+        true to com.nosferatu.launcher.R.string.option_enabled,
+        false to com.nosferatu.launcher.R.string.option_disabled
+    )
+
+    Column(modifier = Modifier.fillMaxSize().background(bg)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black, color = contentColor)
+            Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = contentColor)
+        }
+        HorizontalDivider(thickness = 1.dp, color = contentColor.copy(alpha = 0.2f))
+
+        options.forEach { (value, labelRes) ->
+            val isSelected = value == currentValue
+            Column(modifier = Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        text = stringResource(id = labelRes),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)

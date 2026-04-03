@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import java.io.File
 import androidx.core.content.edit
 import androidx.compose.runtime.getValue
@@ -21,6 +22,8 @@ class LibraryConfig(private val context: Context) {
         private const val KEY_FONT_SIZE = "font_size_scale"
         private const val KEY_LINE_HEIGHT = "line_height_factor"
         private const val KEY_PAGE_MARGINS = "page_margins"
+        private const val KEY_FORCE_BOLD = "force_bold"
+        private const val KEY_VOLUME_KEYS = "volume_keys"
         private val DEFAULT_PATH = Environment.getExternalStorageDirectory().absolutePath
         private const val DEFAULT_FONT_SIZE = 1.1f
         private const val DEFAULT_LINE_HEIGHT = 1.5f
@@ -80,5 +83,23 @@ class LibraryConfig(private val context: Context) {
         backgroundMode = newValue
         prefs.edit().putFloat(KEY_BACKGROUND_MODE, newValue).apply()
         Log.d(TAG, "Background mode aggiornato e salvato: $newValue")
+    }
+
+    var forceBold by mutableStateOf(prefs.getBoolean(KEY_FORCE_BOLD, false))
+        private set
+
+    fun updateForceBold(newValue: Boolean) {
+        forceBold = newValue
+        prefs.edit().putBoolean(KEY_FORCE_BOLD, newValue).apply()
+        Log.d(TAG, "Force bold aggiornato e salvato: $newValue")
+    }
+
+    var volumeKeys by mutableStateOf(prefs.getBoolean(KEY_VOLUME_KEYS, false))
+        private set
+
+    fun updateVolumeKeys(newValue: Boolean) {
+        volumeKeys = newValue
+        prefs.edit().putBoolean(KEY_VOLUME_KEYS, newValue).apply()
+        Log.d(TAG, "Volume keys aggiornato e salvato: $newValue")
     }
 }
