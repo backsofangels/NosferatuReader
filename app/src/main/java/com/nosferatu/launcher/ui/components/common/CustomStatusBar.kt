@@ -12,10 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun CustomStatusBar() {
-    Column(modifier = Modifier.background(Color.White)) {
+    val colors = LocalAppColors.current
+
+    Column(modifier = Modifier.background(colors.bg)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -29,7 +32,7 @@ fun CustomStatusBar() {
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = 0.5.dp,
-            color = Color.Black
+            color = colors.onBg
         )
     }
 }

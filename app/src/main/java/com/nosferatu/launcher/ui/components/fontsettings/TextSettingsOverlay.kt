@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nosferatu.launcher.library.LibraryConfig
+import com.nosferatu.launcher.ui.LocalAppColors
 // ...existing imports kept; removed unused ones to clean warnings
 
 @Composable
@@ -25,13 +26,13 @@ fun ReaderTextSettings(
     libraryConfig: LibraryConfig,
     onPreferenceChanged: () -> Unit
 ) {
+    val colors = LocalAppColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(colors.bg)
             .padding(24.dp)
     ) {
-        // 1. Dimensione Testo: range tipico e-reader 0.5f - 2.5f
         SliderRow(
             label = stringResource(id = R.string.dimension_label),
             currentValue = libraryConfig.fontSizeScale,
@@ -70,7 +71,7 @@ fun SliderRow(
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             ),
-            color = Color.Black.copy(alpha = 0.6f)
+            color = LocalAppColors.current.onBg.copy(alpha = 0.6f)
         )
 
         Row(
@@ -104,7 +105,7 @@ fun SliderRow(
                             Modifier
                                 .width(2.dp)
                                 .height(20.dp)
-                                .background(Color.Black)
+                                .background(LocalAppColors.current.onBg)
                         )
                     },
                     track = { sliderState ->
@@ -121,7 +122,7 @@ fun SliderRow(
                                 modifier = Modifier
                                     .fillMaxWidth(fraction)
                                     .fillMaxHeight()
-                                    .background(Color.Black)
+                                    .background(LocalAppColors.current.onBg)
                             )
                         }
                     }
@@ -145,16 +146,15 @@ fun ControlTextButton(
 ) {
     Box(
         modifier = Modifier
-            .size(36.dp)
-            .border(0.5.dp, Color.Black)
+            .size(48.dp) // Increased size from 36.dp to 48.dp
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = symbol,
-            fontSize = 20.sp,
+            fontSize = 24.sp, // Increased font size from 20.sp to 24.sp
             fontWeight = FontWeight.Light,
-            color = Color.Black
+            color = LocalAppColors.current.onBg
         )
     }
 }

@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import java.io.File
 import androidx.core.content.edit
 import androidx.compose.runtime.getValue
@@ -17,13 +18,22 @@ class LibraryConfig(private val context: Context) {
 
     companion object {
         private const val KEY_ROOT_PATH = "root_path"
+        private const val KEY_BACKGROUND_MODE = "background_mode"
         private const val KEY_FONT_SIZE = "font_size_scale"
-        private const val KEY_LINE_HEIGHT = "line_height_factor"
-        private const val KEY_PAGE_MARGINS = "page_margins"
-        private val DEFAULT_PATH = Environment.getExternalStorageDirectory().absolutePath
+        private const val KEY_FORCE_BOLD = "force_bold"
+        private const val KEY_VOLUME_KEYS = "volume_keys"
+        private const val KEY_INVERT_TOUCHES = "invert_touches"
+        // Avoid accessing Android Environment at class initialization time so JVM unit tests
+        // can instantiate/mocking this class without triggering Android API calls.
+        private val DEFAULT_PATH: String
+            get() = try {
+                Environment.getExternalStorageDirectory().absolutePath
+            } catch (t: Throwable) {
+                // Fallback to user home on non-Android environments (tests)
+                System.getProperty("user.home") ?: "/"
+            }
         private const val DEFAULT_FONT_SIZE = 1.1f
-        private const val DEFAULT_LINE_HEIGHT = 1.5f
-        private const val DEFAULT_PAGE_MARGINS = 1.0f
+        private const val DEFAULT_BACKGROUND_MODE = 0.0f // 0 = bianco, 1 = panna, 2 = nero
     }
 
     var rootPath: String
@@ -48,26 +58,45 @@ class LibraryConfig(private val context: Context) {
     )
         private set
 
-    var lineHeightFactor by mutableFloatStateOf(prefs.getFloat(KEY_LINE_HEIGHT, DEFAULT_LINE_HEIGHT))
-        private set
-
     fun updateFontSize(newValue: Float) {
         fontSizeScale = newValue
         prefs.edit().putFloat(KEY_FONT_SIZE, newValue).apply()
         Log.d(TAG, "Font size scale aggiornato e salvato: $newValue")
     }
 
-    fun updateLineHeight(newValue: Float) {
-        lineHeightFactor = newValue
-        prefs.edit().putFloat(KEY_LINE_HEIGHT, newValue).apply()
-        Log.d(TAG, "Line height scale aggiornato e salvato: $newValue")
-    }
-
-    var pageMargins by mutableFloatStateOf(prefs.getFloat(KEY_PAGE_MARGINS, DEFAULT_PAGE_MARGINS))
+    var backgroundMode by mutableFloatStateOf(prefs.getFloat(KEY_BACKGROUND_MODE, DEFAULT_BACKGROUND_MODE))
         private set
 
-    fun updatePageMargins(newValue: Float) {
-        pageMargins = newValue
-        prefs.edit().putFloat(KEY_PAGE_MARGINS, newValue).apply()
+    fun updateBackgroundMode(newValue: Float) {
+        backgroundMode = newValue
+        prefs.edit().putFloat(KEY_BACKGROUND_MODE, newValue).apply()
+        Log.d(TAG, "Background mode aggiornato e salvato: $newValue")
+    }
+
+    var forceBold by mutableStateOf(prefs.getBoolean(KEY_FORCE_BOLD, false))
+        private set
+
+    fun updateForceBold(newValue: Boolean) {
+        forceBold = newValue
+        prefs.edit().putBoolean(KEY_FORCE_BOLD, newValue).apply()
+        Log.d(TAG, "Force bold aggiornato e salvato: $newValue")
+    }
+
+    var volumeKeys by mutableStateOf(prefs.getBoolean(KEY_VOLUME_KEYS, false))
+        private set
+
+    fun updateVolumeKeys(newValue: Boolean) {
+        volumeKeys = newValue
+        prefs.edit().putBoolean(KEY_VOLUME_KEYS, newValue).apply()
+        Log.d(TAG, "Volume keys aggiornato e salvato: $newValue")
+    }
+
+    var invertTouches by mutableStateOf(prefs.getBoolean(KEY_INVERT_TOUCHES, false))
+        private set
+
+    fun updateInvertTouches(newValue: Boolean) {
+        invertTouches = newValue
+        prefs.edit().putBoolean(KEY_INVERT_TOUCHES, newValue).apply()
+        Log.d(TAG, "Invert touches aggiornato e salvato: $newValue")
     }
 }

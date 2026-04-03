@@ -29,6 +29,7 @@ import com.nosferatu.launcher.library.LibraryViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun TopActionBar(
@@ -46,10 +47,12 @@ fun TopActionBar(
         label = "rotation"
     )
 
+    val colors = LocalAppColors.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(colors.bg)
     ) {
         Box(
             modifier = Modifier
@@ -68,13 +71,13 @@ fun TopActionBar(
                         enabled = !isScanning,
                         onClick = onSyncClick
                     ),
-                tint = if (isScanning) Color.Gray else Color.Black
+                tint = if (isScanning) Color.Gray else colors.onBg
             )
         }
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = 0.5.dp,
-            color = Color.Black
+            color = colors.onBg.copy(alpha = 0.3f)
         )
     }
 }

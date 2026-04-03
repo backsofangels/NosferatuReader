@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nosferatu.launcher.ui.LocalAppColors
 import com.nosferatu.launcher.ui.ScreenSelectionTab
 
 @Composable
@@ -28,13 +29,14 @@ fun BottomBar(
     selectedTab: ScreenSelectionTab,
     onTabSelected: (ScreenSelectionTab) -> Unit
 ) {
+    val colors = LocalAppColors.current
     Column {
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.onBg.copy(alpha = 0.2f)))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(colors.bg)
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
@@ -51,16 +53,16 @@ fun BottomBar(
                         painter = painterResource(id = tab.iconRes),
                         contentDescription = stringResource(id = tab.labelRes),
                         modifier = Modifier.size(22.dp),
-                        tint = Color.Black
+                        tint = colors.onBg
                     )
                     Text(
                         text = stringResource(id = tab.labelRes),
                         fontSize = 10.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = Color.Black
+                        color = colors.onBg
                     )
                     if (isSelected) {
-                        Box(modifier = Modifier.padding(top = 2.dp).size(4.dp).background(Color.Black))
+                        Box(modifier = Modifier.padding(top = 2.dp).size(4.dp).background(colors.onBg))
                     }
                 }
             }

@@ -18,6 +18,7 @@ import com.nosferatu.launcher.ui.components.home.HomeReadingNowItem
 import com.nosferatu.launcher.ui.components.home.HomeSection
 import com.nosferatu.launcher.ui.components.home.TopActionBar
 import com.nosferatu.launcher.ui.states.LibraryUiState
+import com.nosferatu.launcher.ui.LocalAppColors
 
 @Composable
 fun HomeScreen(
@@ -29,10 +30,12 @@ fun HomeScreen(
         .filter { it.lastLocationJson != null}
         .take(2)
 
+    val bg = LocalAppColors.current.bg
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(bg)
     ) {
         item {
             TopActionBar(

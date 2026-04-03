@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <attr name="readerBackgroundColor" format="color" />
+    <attr name="readerRootBackgroundColor" format="color" />
     <attr name="readerTextColor" format="color" />
 </resources>

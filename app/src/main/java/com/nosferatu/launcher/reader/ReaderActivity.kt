@@ -2,6 +2,7 @@ package com.nosferatu.launcher.reader
 
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -20,6 +21,13 @@ import com.nosferatu.launcher.R
 import com.nosferatu.launcher.library.LibraryConfig
 import com.nosferatu.launcher.library.LibraryViewModel
 import com.nosferatu.launcher.library.LibraryViewModelFactory
+import com.nosferatu.launcher.ui.LocalAppColors
+import com.nosferatu.launcher.ui.appColorsFor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import com.nosferatu.launcher.ui.components.fontsettings.ReaderTextSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,12 +37,15 @@ import org.readium.r2.navigator.epub.EpubDefaults
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.ColumnCount
+import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.locateProgression
+import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.getOrElse
@@ -42,6 +53,8 @@ import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.epub.EpubParser
 import java.io.File
+import com.nosferatu.launcher.reader.TestReaderInjector
+import com.nosferatu.launcher.reader.TestNavigatorFragment
 
 @OptIn(ExperimentalReadiumApi::class)
 class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
@@ -68,6 +81,13 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Apply theme before inflation so all XML attr references resolve correctly
+        val bgMode = getSharedPreferences("library_prefs", MODE_PRIVATE).getFloat("background_mode", 0f)
+        when (bgMode.toInt()) {
+            1 -> setTheme(R.style.Theme_NosferatuReader_Cream)
+            2 -> setTheme(R.style.Theme_NosferatuReader_Dark)
+            else -> setTheme(R.style.Theme_NosferatuReader)
+        }
         setContentView(R.layout.activity_reader)
 
         // Setup UI Insets
@@ -91,6 +111,40 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val lastLocationJson = intent.getStringExtra("LAST_LOCATION_JSON")
         bookId = intent.getLongExtra("BOOK_ID", -1)
 
+        // If tests enabled fake navigator, avoid initializing Readium and populate minimal UI
+        if (TestReaderInjector.useFakeNavigator) {
+            // Insert a minimal test fragment so the layout has content
+            if (savedInstanceState == null) {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.reader_container, TestNavigatorFragment(), "EpubNavigator")
+                    .commitNow()
+            }
+
+            // Populate header/footer with supplied test metadata
+            val testTitle = intent.getStringExtra("BOOK_TITLE") ?: TestReaderInjector.fakeTitle ?: ""
+            val testAuthor = intent.getStringExtra("BOOK_AUTHOR") ?: TestReaderInjector.fakeAuthor ?: ""
+            findViewById<TextView>(R.id.menu_book_title).text = testTitle.uppercase()
+            findViewById<TextView>(R.id.menu_book_author).text = testAuthor
+
+            // Observe TestNavigatorFragment locator updates and update UI accordingly
+            val testNavigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? TestNavigatorFragment
+            if (testNavigator != null) {
+                lifecycleScope.launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        testNavigator.currentLocator.collect { locator ->
+                            if (locator != null) {
+                                _lastKnownLocator = locator
+                                updateUiWithLocator(locator)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Skip Readium initialization in test mode
+            return
+        }
+
         lifecycleScope.launch {
             try {
                 publication = openPublication(File(bookPath))
@@ -103,15 +157,19 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 val navigatorFactory = EpubNavigatorFactory(
                     publication = publication!!,
                     configuration = EpubNavigatorFactory.Configuration(
-                        defaults = EpubDefaults(
-                            pageMargins = 1.0,
-                            lineHeight = libraryConfig.lineHeightFactor.toDouble()
-                        )
+                        defaults = EpubDefaults()
                     )
                 ).createFragmentFactory(
                     initialPreferences = EpubPreferences(
                         fontSize = libraryConfig.fontSizeScale.toDouble(),
-                        lineHeight = libraryConfig.lineHeightFactor.toDouble()
+                        fontWeight = if (libraryConfig.forceBold) 2.0 else null,
+                        columnCount = ColumnCount.ONE,
+                        publisherStyles = true,
+                        theme = when (libraryConfig.backgroundMode.toInt()) {
+                            1 -> Theme.SEPIA
+                            2 -> Theme.DARK
+                            else -> Theme.LIGHT
+                        }
                     ),
                     initialLocator = initialLocator,
                     listener = this@ReaderActivity
@@ -152,38 +210,62 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val btnToggle = findViewById<View>(R.id.btn_font_settings)
 
         settingsContainer.setContent {
-            // Applica il tema della tua app se necessario
-            ReaderTextSettings(
-                libraryConfig = libraryConfig,
-                onPreferenceChanged = { applyReaderPreferences() }
-            )
+            val appColors = appColorsFor(libraryConfig.backgroundMode)
+            val isDark = libraryConfig.backgroundMode.toInt() == 2
+            val colorScheme = if (isDark) {
+                darkColorScheme().copy(
+                    background = Color(0xFF222222),
+                    surface = Color(0xFF222222),
+                    onBackground = Color(0xFFEEEEEE),
+                    onSurface = Color(0xFFEEEEEE)
+                )
+            } else {
+                lightColorScheme(surface = Color.White)
+            }
+            MaterialTheme(colorScheme = colorScheme) {
+                CompositionLocalProvider(LocalAppColors provides appColors) {
+                    ReaderTextSettings(
+                        libraryConfig = libraryConfig,
+                        onPreferenceChanged = { applyReaderPreferences() }
+                    )
+                }
+            }
         }
 
         btnToggle.setOnClickListener {
             isFontBarVisible = !isFontBarVisible
             settingsContainer.visibility = if (isFontBarVisible) View.VISIBLE else View.GONE
-            btnToggle.rotation = if (isFontBarVisible) 45f else 0f
         }
     }
 
     private fun applyReaderPreferences() {
-        val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+        val fragment = supportFragmentManager.findFragmentByTag("EpubNavigator")
+        val navigator = fragment as? EpubNavigatorFragment
+        val testNavigator = fragment as? TestNavigatorFragment
 
         val newPreferences = EpubPreferences(
             fontSize = libraryConfig.fontSizeScale.toDouble(),
-            lineHeight = libraryConfig.lineHeightFactor.toDouble()
+            fontWeight = if (libraryConfig.forceBold) 2.0 else null,
+            columnCount = ColumnCount.ONE,
+            publisherStyles = true,
+            theme = when (libraryConfig.backgroundMode.toInt()) {
+                1 -> Theme.SEPIA
+                2 -> Theme.DARK
+                else -> Theme.LIGHT
+            }
         )
 
-        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, LH=${newPreferences.lineHeight}")
+        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, Bold=${libraryConfig.forceBold}, PublisherStyles=${newPreferences.publisherStyles}")
         navigator?.submitPreferences(newPreferences)
+        testNavigator?.submitPreferences(newPreferences)
     }
 
     private fun updateUiWithLocator(locator: Locator) {
         val chapterTitle = locator.title ?: ""
         val progression = locator.locations.totalProgression ?: 0.0
         val percent = (progression * 100).toInt().coerceIn(0, 100)
-        val bookTitle = publication?.metadata?.title?.uppercase() ?: ""
-        val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name
+        val bookTitle = publication?.metadata?.title?.uppercase() ?: (TestReaderInjector.fakeTitle?.uppercase() ?: "")
+        val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name ?: TestReaderInjector.fakeAuthor
 
         findViewById<TextView>(R.id.immersive_header_title).text = chapterTitle.uppercase()
         findViewById<TextView>(R.id.immersive_footer_text).text = getString(com.nosferatu.launcher.R.string.reader_footer_format, bookTitle, percent)
@@ -294,10 +376,48 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
             if (isCenter) { toggleMenu(); return true }
             if (isMenuVisible) { toggleMenu(); return true }
-            return false
+
+            // Side tap navigation — left/right zones swappable via invertTouches
+            val tapRight = point.x > screenWidth * 0.5f
+            val goForward = if (libraryConfig.invertTouches) !tapRight else tapRight
+            val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+                ?: return false
+            lifecycleScope.launch { navigateByOnePage(navigator, goForward) }
+            return true
         }
     }
 
     override fun onJumpToLocator(locator: Locator) { _lastKnownLocator = locator }
     @ExperimentalReadiumApi override fun onExternalLinkActivated(url: AbsoluteUrl) { /* do nothing */ }
+
+    private suspend fun navigateByOnePage(navigator: EpubNavigatorFragment, forward: Boolean) {
+        val pub = publication ?: return
+        val allPositions = pub.positions()
+        if (allPositions.isEmpty()) {
+            if (forward) navigator.goForward(animated = true) else navigator.goBackward(animated = true)
+            return
+        }
+        val currentProgression = _lastKnownLocator?.locations?.totalProgression ?: 0.0
+        val currentIndex = allPositions.indexOfLast { (it.locations.totalProgression ?: 0.0) <= currentProgression + 0.0001 }
+        val safeIndex = if (currentIndex < 0) 0 else currentIndex
+        val targetIndex = if (forward) safeIndex + 1 else safeIndex - 1
+        val target = allPositions.getOrNull(targetIndex.coerceIn(0, allPositions.lastIndex)) ?: return
+        navigator.go(target, animated = false)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (libraryConfig.volumeKeys && event.action == KeyEvent.ACTION_DOWN) {
+            val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+            if (navigator != null) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                        val forward = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                        lifecycleScope.launch { navigateByOnePage(navigator, forward) }
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
 }

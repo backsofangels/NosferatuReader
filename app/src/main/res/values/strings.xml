@@ -15,19 +15,20 @@
     <string name="symbol_plus">+</string>
     <string name="in_reading">In Lettura</string>
     <string name="font_size_title">Dimensione Testo</string>
-    <string name="line_height_title">Interlinea</string>
     <string name="back_arrow">←</string>
     <!-- Settings titles -->
     <string name="setting_font_choice">Carattere Predefinito</string>
     <string name="setting_font_size">Dimensioni Testo</string>
-    <string name="setting_line_height">Interlinea</string>
-    <string name="setting_page_borders">Margini Pagina</string>
     <string name="setting_force_bold">Forza Grassetto</string>
     <string name="setting_invert_touches">Modalità Inversione Tocchi</string>
     <string name="setting_volume_keys">Tasti Volume</string>
     <string name="setting_automatic_scan">Scansione Automatica</string>
     <string name="setting_export_database">Esporta Database</string>
     <string name="setting_wipe_library">Reset Libreria</string>
+    <string name="setting_background_color">Colore Sfondo</string>
+    <string name="color_white">Bianco</string>
+    <string name="color_cream">Panna</string>
+    <string name="color_black">Nero</string>
     <!-- Settings categories -->
     <string name="category_appearance">Aspetto e Tipografia</string>
     <string name="category_navigation">Comportamento e Navigazione</string>
@@ -43,10 +44,9 @@
     <string name="font_size_small">Piccola</string>
     <string name="font_size_medium">Media</string>
     <string name="font_size_large">Grande</string>
-    <!-- Line height options -->
-    <string name="line_height_narrow">Stretta</string>
-    <string name="line_height_normal">Normale</string>
-    <string name="line_height_wide">Ampia</string>
+    <string name="force_bold_title">Forza Grassetto</string>
+    <string name="option_enabled">Abilitato</string>
+    <string name="option_disabled">Disabilitato</string>
     <string name="percent_format">%1$d%%</string>
     <string name="reader_footer_format">%1$s - %2$d%%</string>
 </resources>

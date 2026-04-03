@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nosferatu.launcher.library.LibraryConfig
+import com.nosferatu.launcher.ui.LocalAppColors
 import kotlin.math.abs
 
 sealed class SettingsNavigation {
@@ -29,16 +30,19 @@ sealed class SettingsNavigation {
 fun SettingsScreen(libraryConfig: LibraryConfig) {
     var currentNav by remember { mutableStateOf<SettingsNavigation>(SettingsNavigation.Main) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    val colors = LocalAppColors.current
+
+    Box(modifier = Modifier.fillMaxSize().background(colors.bg)) {
         when (val nav = currentNav) {
             is SettingsNavigation.Main -> {
                 SettingsMainList(onNavigate = { key ->
                     when (key) {
-                        SettingKey.FONT_SIZE, SettingKey.LINE_HEIGHT ->
+                        SettingKey.FONT_SIZE, SettingKey.BACKGROUND_COLOR,
+                        SettingKey.FORCE_BOLD, SettingKey.VOLUME_KEYS, SettingKey.INVERT_TOUCHES ->
                             currentNav = SettingsNavigation.SubMenu(key)
                         else -> Log.d("Settings", "Azione per $key")
                     }
-                })
+                }, contentColor = colors.onBg)
             }
 
             is SettingsNavigation.SubMenu -> {
@@ -52,14 +56,32 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
                         onBack = { currentNav = SettingsNavigation.Main },
                         onSelect = { libraryConfig.updateFontSize(it.value) }
                     )
-                    SettingKey.LINE_HEIGHT -> SelectionSubMenu(
-                        title = stringResource(id = com.nosferatu.launcher.R.string.line_height_title),
-                        currentValue = libraryConfig.lineHeightFactor,
-                        options = LineHeightOption.entries.toTypedArray(),
+                    SettingKey.BACKGROUND_COLOR -> SelectionSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_background_color),
+                        currentValue = libraryConfig.backgroundMode,
+                        options = BackgroundColorOption.entries.toTypedArray(),
                         getLabelRes = { it.labelRes },
                         getValue = { it.value },
                         onBack = { currentNav = SettingsNavigation.Main },
-                        onSelect = { libraryConfig.updateLineHeight(it.value) }
+                        onSelect = { libraryConfig.updateBackgroundMode(it.value) }
+                    )
+                    SettingKey.FORCE_BOLD -> BooleanSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.force_bold_title),
+                        currentValue = libraryConfig.forceBold,
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateForceBold(it) }
+                    )
+                    SettingKey.VOLUME_KEYS -> BooleanSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_volume_keys),
+                        currentValue = libraryConfig.volumeKeys,
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateVolumeKeys(it) }
+                    )
+                    SettingKey.INVERT_TOUCHES -> BooleanSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_invert_touches),
+                        currentValue = libraryConfig.invertTouches,
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateInvertTouches(it) }
                     )
                     else -> currentNav = SettingsNavigation.Main
                 }
@@ -78,15 +100,19 @@ fun <T> SelectionSubMenu(
     onBack: () -> Unit,
     onSelect: (T) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    // use the actual app theme colours, not derived from the setting value
+    val bg = LocalAppColors.current.bg
+    val contentColor = LocalAppColors.current.onBg
+
+    Column(modifier = Modifier.fillMaxSize().background(bg)) {
         Row(
             modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black)
-            Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black)
+            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black, color = contentColor)
+            Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = contentColor)
         }
-        HorizontalDivider(thickness = 1.dp, color = Color.Black)
+        HorizontalDivider(thickness = 1.dp, color = contentColor.copy(alpha = 0.2f))
 
         options.forEach { option ->
             val isSelected = abs(getValue(option) - currentValue) < 0.01f
@@ -96,18 +122,61 @@ fun <T> SelectionSubMenu(
                         text = stringResource(id = getLabelRes(option)),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) Color.Black else Color.DarkGray
+                        color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)
                     )
-                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black)
+                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black, color = contentColor)
                 }
             }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
         }
     }
 }
 
 @Composable
-private fun SettingsMainList(onNavigate: (SettingKey) -> Unit) {
+fun BooleanSubMenu(
+    title: String,
+    currentValue: Boolean,
+    onBack: () -> Unit,
+    onSelect: (Boolean) -> Unit
+) {
+    val bg = LocalAppColors.current.bg
+    val contentColor = LocalAppColors.current.onBg
+
+    val options = listOf(
+        true to com.nosferatu.launcher.R.string.option_enabled,
+        false to com.nosferatu.launcher.R.string.option_disabled
+    )
+
+    Column(modifier = Modifier.fillMaxSize().background(bg)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black, color = contentColor)
+            Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = contentColor)
+        }
+        HorizontalDivider(thickness = 1.dp, color = contentColor.copy(alpha = 0.2f))
+
+        options.forEach { (value, labelRes) ->
+            val isSelected = value == currentValue
+            Column(modifier = Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        text = stringResource(id = labelRes),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)
+                    )
+                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black, color = contentColor)
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
+        }
+    }
+}
+
+@Composable
+private fun SettingsMainList(onNavigate: (SettingKey) -> Unit, contentColor: Color) {
     val groupedSettings = settingsList.groupBy { it.categoryRes }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         groupedSettings.forEach { (category, items) ->
@@ -115,14 +184,15 @@ private fun SettingsMainList(onNavigate: (SettingKey) -> Unit) {
                 Text(
                     text = stringResource(id = category).uppercase(),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black, fontSize = 12.sp),
+                    color = contentColor,
                     modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 8.dp)
                 )
             }
             itemsIndexed(items) { index, setting ->
                 Column(modifier = Modifier.fillMaxWidth().clickable { onNavigate(setting.key) }.padding(16.dp)) {
-                    Text(text = stringResource(id = setting.titleRes), color = Color.DarkGray)
+                    Text(text = stringResource(id = setting.titleRes), color = contentColor.copy(alpha = 0.87f))
                 }
-                if (index < items.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                if (index < items.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
             }
         }
     }
