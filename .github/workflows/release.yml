@@ -41,7 +41,11 @@ jobs:
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release-key.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
@@ -51,7 +55,7 @@ jobs:
         run: find app/build/outputs/apk -name "*.apk"
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
