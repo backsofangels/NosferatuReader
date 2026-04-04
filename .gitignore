@@ -15,8 +15,11 @@ release.keystore
 *.keystore
 *.jks
 
+
 # Log/OS Files
 *.log
+app/release*
+app/instrumentation*
 
 # Android Studio generated files and folders
 captures/
