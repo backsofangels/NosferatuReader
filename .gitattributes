@@ -1,0 +1,15 @@
+# Forza LF per tutti gli script shell
+*.sh        text eol=lf
+gradlew     text eol=lf
+gradlew.bat text eol=crlf
+*.gradle    text eol=lf
+*.gradle.kts text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Binari — nessuna conversione
+*.apk       binary
+*.keystore  binary
+*.jks       binary
+*.png       binary
+*.jpg       binary

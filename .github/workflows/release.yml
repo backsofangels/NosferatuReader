@@ -1,28 +1,24 @@
 name: Release APK
 
 on:
+  push:
+    branches:
+      - develop
+    tags:
+      - 'v*.*.*'
   pull_request:
     branches:
       - main
-    types:
-      - closed
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Versione da buildare (es. v1.0.0)'
+        required: false
+        default: 'v0.0.1-test'
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,32 +30,84 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Install Android SDK (act locale)
+        if: ${{ env.ACT == 'true' }}
+        run: |
+          CMDLINE_URL="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          wget -q $CMDLINE_URL -O /tmp/cmdline-tools.zip
+          unzip -q /tmp/cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
+          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+
+          mkdir -p $HOME/android-sdk/licenses
+          printf "24333f8a63b6825ea9c5514f83c2829b004d1fee\nd56f5187479451eabf01fb78af6dfcb131a6481e" \
+            > $HOME/android-sdk/licenses/android-sdk-license
+          printf "84831b9409646a918e30573bab4c9c91346d8abd" \
+            > $HOME/android-sdk/licenses/android-sdk-preview-license
+
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
+            --sdk_root=$HOME/android-sdk \
+            "build-tools;34.0.0" \
+            "platform-tools" 2>&1
+
+          echo "ANDROID_HOME=$HOME/android-sdk"           >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk"       >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools"           >> $GITHUB_PATH
+          echo "$HOME/android-sdk/build-tools/34.0.0"       >> $GITHUB_PATH
+
+      - name: Override local.properties
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "sdk.dir=$SDK" > local.properties
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Decode Keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.jks
-
       - name: Build Release APK
-        run: ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$(pwd)/app/release-key.jks \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
-      
-      - name: List APK outputs
-        run: find app/build/outputs/apk -name "*.apk"
+        run: ./gradlew assembleRelease
+
+      - name: Upload unsigned APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 1
+
+  sign-and-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download unsigned APK
+        uses: actions/download-artifact@v4
+        with:
+          name: unsigned-apk
+          path: release/
+
+      - name: Sign APK
+        id: sign_apk
+        uses: ilharp/sign-android-release@v1
+        with:
+          releaseDir: release/
+          signingKey: ${{ secrets.SIGNING_KEY }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          buildToolsVersion: 34.0.0
+
+      - name: Rename APK
+        run: |
+          mv "${{ steps.sign_apk.outputs.signedFile }}" \
+            "release/NosferatuReader-${{ github.ref_name }}.apk"
 
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          tag_name: ${{ github.ref_name }}
           generate_release_notes: true
-          fail_on_unmatched_files: true
+          files: release/NosferatuReader-${{ github.ref_name }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

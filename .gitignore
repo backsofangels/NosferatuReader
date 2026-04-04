@@ -7,6 +7,13 @@ build/
 # Local configuration file (sdk path, etc)
 local.properties
 build-run.ps1
+.actrc
+.secrets
+.env
+keystore_b64.txt
+release.keystore
+*.keystore
+*.jks
 
 # Log/OS Files
 *.log
