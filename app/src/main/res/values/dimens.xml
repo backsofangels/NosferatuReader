@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing scale -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">12dp</dimen>
+    <dimen name="spacing_16">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+
+    <!-- Reader specific -->
+    <dimen name="reader_progress_height">3dp</dimen>
+    <dimen name="reader_icon_size">48dp</dimen>
+    <dimen name="reader_icon_padding">12dp</dimen>
+    <dimen name="reader_bottom_padding">20dp</dimen>
+    <dimen name="reader_menu_seek_margin_top">16dp</dimen>
+    <dimen name="reader_menu_seek_margin_horizontal">16dp</dimen>
+    <dimen name="reader_menu_title_margin_horizontal">8dp</dimen>
+    <!-- Common tokens -->
+    <dimen name="touch_target_min">48dp</dimen>
+    <dimen name="icon_small">24dp</dimen>
+    <dimen name="divider_thin">0.5dp</dimen>
+    <dimen name="spacing_20">20dp</dimen>
+    <dimen name="divider_1">1dp</dimen>
+    <dimen name="cover_width">55dp</dimen>
+    <dimen name="row_min_height">56dp</dimen>
+</resources>

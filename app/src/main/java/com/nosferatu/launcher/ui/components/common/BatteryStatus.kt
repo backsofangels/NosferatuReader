@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.nosferatu.launcher.ui.LocalAppColors
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,24 +45,26 @@ fun BatteryStatus() {
         onDispose { context.unregisterReceiver(receiver) }
     }
 
+    val colors = LocalAppColors.current
     Row(verticalAlignment = Alignment.Companion.CenterVertically) {
         Text(
             text = "$batteryLevel%",
             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Companion.Bold),
+            color = colors.onBg,
             modifier = Modifier.Companion.padding(end = 4.dp)
         )
         Box(
             modifier = Modifier.Companion
                 .width(18.dp)
                 .height(10.dp)
-                .border(1.dp, Color.Companion.Black)
+                .border(1.dp, colors.onBg.copy(alpha = 0.6f))
                 .padding(1.dp)
         ) {
             Box(
                 modifier = Modifier.Companion
                     .fillMaxWidth(batteryLevel / 100f)
                     .fillMaxHeight()
-                    .background(Color.Companion.Black)
+                    .background(colors.onBg)
             )
         }
     }

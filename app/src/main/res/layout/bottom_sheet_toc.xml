@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/spacing_16"
+    android:background="?attr/readerRootBackgroundColor">
+
+    <TextView
+        android:id="@+id/toc_sheet_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/toc_title"
+        android:textSize="16sp"
+        android:textColor="?attr/readerTextColor"
+        android:paddingBottom="@dimen/spacing_md"
+        android:fontFamily="sans-serif-medium" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/toc_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:overScrollMode="ifContentScrolls" />
+
+</LinearLayout>

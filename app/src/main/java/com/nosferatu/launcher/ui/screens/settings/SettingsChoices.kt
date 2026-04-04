@@ -21,3 +21,13 @@ enum class BackgroundColorOption(val labelRes: Int, val value: Float) {
             entries.find { kotlin.math.abs(it.value - value) < 0.01f } ?: WHITE
     }
 }
+
+enum class FontChoiceOption(val labelRes: Int, val value: Float) {
+    DEFAULT(com.nosferatu.launcher.R.string.font_choice_default, 0.0f),
+    LITERATA(com.nosferatu.launcher.R.string.font_choice_literata, 1.0f);
+
+    companion object {
+        fun fromValue(value: Float): FontChoiceOption =
+            entries.find { kotlin.math.abs(it.value - value) < 0.01f } ?: DEFAULT
+    }
+}

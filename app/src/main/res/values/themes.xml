@@ -4,17 +4,23 @@
         <item name="readerBackgroundColor">@color/reader_bg_light</item>
         <item name="readerRootBackgroundColor">@color/reader_bg_light</item>
         <item name="readerTextColor">@color/reader_text_light</item>
+        <item name="readerProgressBackgroundColor">@color/reader_progress_bg</item>
+        <item name="readerAccentColor">@color/primary_color</item>
     </style>
 
     <style name="Theme.NosferatuReader.Cream">
         <item name="readerBackgroundColor">@color/reader_bg_cream</item>
         <item name="readerRootBackgroundColor">@color/reader_bg_root_cream</item>
         <item name="readerTextColor">@color/reader_text_cream</item>
+        <item name="readerProgressBackgroundColor">@color/reader_progress_bg_cream</item>
+        <item name="readerAccentColor">@color/primary_color</item>
     </style>
 
     <style name="Theme.NosferatuReader.Dark">
         <item name="readerBackgroundColor">@color/reader_bg_dark</item>
         <item name="readerRootBackgroundColor">@color/reader_bg_dark</item>
         <item name="readerTextColor">@color/reader_text_dark</item>
+        <item name="readerProgressBackgroundColor">@color/reader_progress_bg_dark</item>
+        <item name="readerAccentColor">@color/primary_color</item>
     </style>
 </resources>

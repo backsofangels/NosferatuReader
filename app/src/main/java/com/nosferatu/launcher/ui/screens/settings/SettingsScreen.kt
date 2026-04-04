@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.foundation.layout.heightIn
+import com.nosferatu.launcher.ui.components.common.SectionHeader
+import com.nosferatu.launcher.ui.components.common.SingleChoiceOptionRow
 import com.nosferatu.launcher.library.LibraryConfig
 import com.nosferatu.launcher.ui.LocalAppColors
 import kotlin.math.abs
@@ -37,7 +41,7 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
             is SettingsNavigation.Main -> {
                 SettingsMainList(onNavigate = { key ->
                     when (key) {
-                        SettingKey.FONT_SIZE, SettingKey.BACKGROUND_COLOR,
+                        SettingKey.FONT_CHOICE, SettingKey.FONT_SIZE, SettingKey.BACKGROUND_COLOR,
                         SettingKey.FORCE_BOLD, SettingKey.VOLUME_KEYS, SettingKey.INVERT_TOUCHES ->
                             currentNav = SettingsNavigation.SubMenu(key)
                         else -> Log.d("Settings", "Azione per $key")
@@ -55,6 +59,15 @@ fun SettingsScreen(libraryConfig: LibraryConfig) {
                         getValue = { it.value },
                         onBack = { currentNav = SettingsNavigation.Main },
                         onSelect = { libraryConfig.updateFontSize(it.value) }
+                    )
+                    SettingKey.FONT_CHOICE -> SelectionSubMenu(
+                        title = stringResource(id = com.nosferatu.launcher.R.string.setting_font_choice),
+                        currentValue = libraryConfig.fontChoice,
+                        options = FontChoiceOption.entries.toTypedArray(),
+                        getLabelRes = { it.labelRes },
+                        getValue = { it.value },
+                        onBack = { currentNav = SettingsNavigation.Main },
+                        onSelect = { libraryConfig.updateFontChoice(it.value) }
                     )
                     SettingKey.BACKGROUND_COLOR -> SelectionSubMenu(
                         title = stringResource(id = com.nosferatu.launcher.R.string.setting_background_color),
@@ -106,28 +119,31 @@ fun <T> SelectionSubMenu(
 
     Column(modifier = Modifier.fillMaxSize().background(bg)) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onBack() }
+                .padding(dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black, color = contentColor)
+            Text(
+                text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow),
+                modifier = Modifier.padding(end = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)),
+                fontWeight = FontWeight.Black,
+                color = contentColor
+            )
             Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = contentColor)
         }
-        HorizontalDivider(thickness = 1.dp, color = contentColor.copy(alpha = 0.2f))
+        HorizontalDivider(thickness = dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_1), color = contentColor.copy(alpha = 0.2f))
+
+        // select the option whose value is nearest to the saved/current value
+        val nearestOption = options.minByOrNull { abs(getValue(it) - currentValue) }
 
         options.forEach { option ->
-            val isSelected = abs(getValue(option) - currentValue) < 0.01f
-            Column(modifier = Modifier.fillMaxWidth().clickable { onSelect(option) }.padding(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        text = stringResource(id = getLabelRes(option)),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)
-                    )
-                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black, color = contentColor)
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
+            val isSelected = option == nearestOption
+            SingleChoiceOptionRow(
+                label = stringResource(id = getLabelRes(option)),
+                selected = isSelected,
+                onClick = { onSelect(option) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)), thickness = dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_thin), color = contentColor.copy(alpha = 0.12f))
         }
     }
 }
@@ -149,28 +165,28 @@ fun BooleanSubMenu(
 
     Column(modifier = Modifier.fillMaxSize().background(bg)) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { onBack() }.padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onBack() }
+                .padding(dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow), modifier = Modifier.padding(end = 16.dp), fontWeight = FontWeight.Black, color = contentColor)
+            Text(
+                text = stringResource(id = com.nosferatu.launcher.R.string.back_arrow),
+                modifier = Modifier.padding(end = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)),
+                fontWeight = FontWeight.Black,
+                color = contentColor
+            )
             Text(text = title.uppercase(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, color = contentColor)
         }
-        HorizontalDivider(thickness = 1.dp, color = contentColor.copy(alpha = 0.2f))
+        HorizontalDivider(thickness = dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_1), color = contentColor.copy(alpha = 0.2f))
 
         options.forEach { (value, labelRes) ->
             val isSelected = value == currentValue
-            Column(modifier = Modifier.fillMaxWidth().clickable { onSelect(value) }.padding(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        text = stringResource(id = labelRes),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) contentColor else contentColor.copy(alpha = 0.7f)
-                    )
-                    if (isSelected) Text(text = stringResource(id = com.nosferatu.launcher.R.string.check_mark), fontWeight = FontWeight.Black, color = contentColor)
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
+            SingleChoiceOptionRow(
+                label = stringResource(id = labelRes),
+                selected = isSelected,
+                onClick = { onSelect(value) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)), thickness = dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_thin), color = contentColor.copy(alpha = 0.12f))
         }
     }
 }
@@ -181,18 +197,15 @@ private fun SettingsMainList(onNavigate: (SettingKey) -> Unit, contentColor: Col
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         groupedSettings.forEach { (category, items) ->
             item {
-                Text(
-                    text = stringResource(id = category).uppercase(),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black, fontSize = 12.sp),
-                    color = contentColor,
-                    modifier = Modifier.padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 8.dp)
-                )
+                SectionHeader(title = stringResource(id = category))
             }
             itemsIndexed(items) { index, setting ->
-                Column(modifier = Modifier.fillMaxWidth().clickable { onNavigate(setting.key) }.padding(16.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().clickable { onNavigate(setting.key) }
+                    .heightIn(min = dimensionResource(id = com.nosferatu.launcher.R.dimen.row_min_height))
+                    .padding(dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16))) {
                     Text(text = stringResource(id = setting.titleRes), color = contentColor.copy(alpha = 0.87f))
                 }
-                if (index < items.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = contentColor.copy(alpha = 0.12f))
+                if (index < items.size - 1) HorizontalDivider(modifier = Modifier.padding(horizontal = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)), thickness = dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_thin), color = contentColor.copy(alpha = 0.12f))
             }
         }
     }

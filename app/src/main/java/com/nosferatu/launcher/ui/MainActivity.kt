@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -75,19 +80,54 @@ class MainActivity: AppCompatActivity() {
                 checkAndRequestPermissions()
             }
 
+            val appColors = appColorsFor(libraryConfig.backgroundMode)
             val isDark = libraryConfig.backgroundMode.toInt() == 2
             val colorScheme = if (isDark) {
                 darkColorScheme().copy(
-                    background = Color(0xFF222222),
-                    surface = Color(0xFF222222),
-                    onBackground = Color(0xFFEEEEEE),
-                    onSurface = Color(0xFFEEEEEE)
+                    background = appColors.bg,
+                    surface = appColors.surface,
+                    onBackground = appColors.onBg,
+                    onSurface = appColors.onBg
                 )
             } else {
-                lightColorScheme(surface = Color.White)
+                lightColorScheme(
+                    background = appColors.bg,
+                    surface = appColors.surface,
+                    onBackground = appColors.onBg,
+                    onSurface = appColors.onBg
+                )
             }
-            val appColors = appColorsFor(libraryConfig.backgroundMode)
-            MaterialTheme(colorScheme = colorScheme) {
+            // Build typography dynamically based on libraryConfig.fontChoice
+            val baseTypography = Typography()
+            val chosenFontFamily = run {
+                // Try to resolve font resource named "literata_regular" in res/font at runtime
+                val ctx = this@MainActivity
+                val resId = ctx.resources.getIdentifier("literata_regular", "font", ctx.packageName)
+                if (resId != 0) FontFamily(Font(resId)) else FontFamily.Default
+            }
+
+            val typography = if (libraryConfig.fontChoice.toInt() == 1) {
+                // copy base typography replacing fontFamily on common styles
+                baseTypography.copy(
+                    displayLarge = baseTypography.displayLarge.copy(fontFamily = chosenFontFamily),
+                    displayMedium = baseTypography.displayMedium.copy(fontFamily = chosenFontFamily),
+                    displaySmall = baseTypography.displaySmall.copy(fontFamily = chosenFontFamily),
+                    headlineLarge = baseTypography.headlineLarge.copy(fontFamily = chosenFontFamily),
+                    headlineMedium = baseTypography.headlineMedium.copy(fontFamily = chosenFontFamily),
+                    headlineSmall = baseTypography.headlineSmall.copy(fontFamily = chosenFontFamily),
+                    titleLarge = baseTypography.titleLarge.copy(fontFamily = chosenFontFamily),
+                    titleMedium = baseTypography.titleMedium.copy(fontFamily = chosenFontFamily),
+                    titleSmall = baseTypography.titleSmall.copy(fontFamily = chosenFontFamily),
+                    bodyLarge = baseTypography.bodyLarge.copy(fontFamily = chosenFontFamily),
+                    bodyMedium = baseTypography.bodyMedium.copy(fontFamily = chosenFontFamily),
+                    bodySmall = baseTypography.bodySmall.copy(fontFamily = chosenFontFamily),
+                    labelLarge = baseTypography.labelLarge.copy(fontFamily = chosenFontFamily),
+                    labelMedium = baseTypography.labelMedium.copy(fontFamily = chosenFontFamily),
+                    labelSmall = baseTypography.labelSmall.copy(fontFamily = chosenFontFamily)
+                )
+            } else baseTypography
+
+            MaterialTheme(colorScheme = colorScheme, typography = typography) {
                 CompositionLocalProvider(LocalAppColors provides appColors) {
                     Scaffold(
                         modifier = Modifier

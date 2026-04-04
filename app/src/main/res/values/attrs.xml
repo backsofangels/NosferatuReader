@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Theme attributes used by reader themes -->
+    <attr name="readerProgressBackgroundColor" format="reference|color" />
+    <attr name="readerAccentColor" format="reference|color" />
     <attr name="readerBackgroundColor" format="color" />
     <attr name="readerRootBackgroundColor" format="color" />
     <attr name="readerTextColor" format="color" />

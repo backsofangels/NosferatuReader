@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+// color handled via LocalAppColors
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.ui.components.home.HomeReadingNowItem
 import com.nosferatu.launcher.ui.components.home.HomeSection
@@ -27,8 +29,9 @@ fun HomeScreen(
     onSyncClick: () -> Unit
 ) {
     val readingNowItems = uiState.books
-        .filter { it.lastLocationJson != null}
-        .take(2)
+        .filter { it.lastLocationJson != null }
+        .sortedByDescending { it.progression }
+        .take(4)
 
     val bg = LocalAppColors.current.bg
 
@@ -47,17 +50,21 @@ fun HomeScreen(
         if (readingNowItems.isNotEmpty()) {
             item {
                 HomeSection(title = stringResource(id = com.nosferatu.launcher.R.string.in_reading)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        readingNowItems.take(2).forEach { book ->
-                            HomeReadingNowItem(
-                                book = book,
-                                onClick = { onOpenBook(book) }
-                            )
+                    // Render as simple 2-column grid using chunked rows so we don't nest lazy containers.
+                    Column(modifier = Modifier.padding(horizontal = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16))) {
+                        readingNowItems.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16))
+                            ) {
+                                row.forEach { book ->
+                                    HomeReadingNowItem(
+                                        book = book,
+                                        onClick = { onOpenBook(book) }
+                                    )
+                                }
+                                // single-item rows left as-is (no weight spacer to avoid internal API exposure)
+                            }
                         }
                     }
                 }

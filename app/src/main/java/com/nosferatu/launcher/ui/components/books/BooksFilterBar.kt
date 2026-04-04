@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
 import com.nosferatu.launcher.library.LibraryFilterTab
 import com.nosferatu.launcher.ui.states.LibraryUiState
 import com.nosferatu.launcher.ui.LocalAppColors
@@ -28,9 +29,9 @@ fun BooksFilterBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
+                .height(dimensionResource(id = com.nosferatu.launcher.R.dimen.touch_target_min))
+                .padding(horizontal = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16), vertical = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)),
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_20))
         ) {
             BooksScreenFilterTabItem(stringResource(id = com.nosferatu.launcher.R.string.tab_books), filter == LibraryFilterTab.ALL, onClick = { onFilterChange(LibraryFilterTab.ALL) })
             BooksScreenFilterTabItem(stringResource(id = com.nosferatu.launcher.R.string.tab_authors), filter == LibraryFilterTab.AUTHORS, onClick = { onFilterChange(LibraryFilterTab.AUTHORS) })
@@ -39,7 +40,7 @@ fun BooksFilterBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
+                .height(dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_1))
                 .background(LocalAppColors.current.onBg.copy(alpha = 0.3f))
         )
     }

@@ -49,4 +49,19 @@
     <string name="option_disabled">Disabilitato</string>
     <string name="percent_format">%1$d%%</string>
     <string name="reader_footer_format">%1$s - %2$d%%</string>
+    <!-- Font choice options -->
+    <string name="font_choice_default">Predefinito</string>
+    <string name="font_choice_literata">Literata</string>
+    <string name="cd_bookmark_toggle">Aggiungi o rimuovi segnalibro</string>
+    <string name="cd_font_settings">Impostazioni carattere</string>
+    <string name="cd_back">Indietro</string>
+    <string name="cd_open_toc">Apri indice</string>
+    <string name="bookmark_added">Segnalibro aggiunto</string>
+    <string name="bookmark_removed">Segnalibro rimosso</string>
+    <string name="bookmarks_title">Segnalibri</string>
+    <string name="no_bookmarks">Nessun segnalibro</string>
+    <string name="open_bookmark">Apri</string>
+    <string name="remove_bookmark">Rimuovi</string>
+    <string name="toc_title">Indice</string>
+    <string name="toc_navigation_failed">Impossibile navigare al capitolo selezionato</string>
 </resources>

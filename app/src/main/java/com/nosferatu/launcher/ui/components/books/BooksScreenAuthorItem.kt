@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
 import com.nosferatu.launcher.R
 import com.nosferatu.launcher.ui.LocalAppColors
 
@@ -29,7 +30,7 @@ fun BooksScreenAuthorItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onToggle() }
-            .padding(16.dp),
+            .padding(dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -43,7 +44,7 @@ fun BooksScreenAuthorItem(
                 id = if (isExpanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
             ),
             contentDescription = null,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(dimensionResource(id = com.nosferatu.launcher.R.dimen.icon_small)),
             tint = LocalAppColors.current.onBg
         )
     }

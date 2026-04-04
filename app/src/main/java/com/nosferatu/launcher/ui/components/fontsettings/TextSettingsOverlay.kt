@@ -114,7 +114,7 @@ fun SliderRow(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(1.dp)
-                                .background(Color.LightGray.copy(alpha = 0.3f)),
+                                .background(LocalAppColors.current.progressTrack.copy(alpha = 0.3f)),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             val fraction = (sliderState.value - minValue) / (maxValue - minValue)

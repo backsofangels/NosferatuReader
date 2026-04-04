@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
 import com.nosferatu.launcher.R
 import com.nosferatu.launcher.library.LibraryViewModel
 import androidx.compose.runtime.collectAsState
@@ -57,27 +58,27 @@ fun TopActionBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 16.dp),
+                .height(dimensionResource(id = R.dimen.touch_target_min))
+                .padding(horizontal = dimensionResource(id = R.dimen.spacing_16)),
             contentAlignment = Alignment.CenterEnd,
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_sync_icon),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(dimensionResource(id = R.dimen.icon_small))
                     .rotate(if (isScanning) rotation else 0f)
                     .clickable(
                         enabled = !isScanning,
                         onClick = onSyncClick
                     ),
-                tint = if (isScanning) Color.Gray else colors.onBg
+                tint = if (isScanning) colors.onBgMuted else colors.onBg
             )
         }
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
-            thickness = 0.5.dp,
-            color = colors.onBg.copy(alpha = 0.3f)
+            thickness = dimensionResource(id = R.dimen.divider_thin),
+            color = colors.divider
         )
     }
 }

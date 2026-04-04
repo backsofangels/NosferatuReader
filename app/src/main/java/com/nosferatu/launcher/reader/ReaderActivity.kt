@@ -28,7 +28,13 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.nosferatu.launcher.ui.components.fontsettings.ReaderTextSettings
+import androidx.core.content.res.ResourcesCompat
+import android.graphics.Typeface
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,6 +61,17 @@ import org.readium.r2.streamer.parser.epub.EpubParser
 import java.io.File
 import com.nosferatu.launcher.reader.TestReaderInjector
 import com.nosferatu.launcher.reader.TestNavigatorFragment
+import android.app.AlertDialog
+import android.widget.Toast
+import java.text.DateFormat
+import java.net.URLDecoder
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.graphics.Color as AndroidColor
 
 @OptIn(ExperimentalReadiumApi::class)
 class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
@@ -65,6 +82,15 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     }
     private var _lastKnownLocator: Locator? = null
     private var bookId: Long = -1
+    private var bookKey: String = ""
+    private val bookmarkStore by lazy { BookmarkStore(this) }
+    // TOC bottom-sheet state
+    private var tocDialog: BottomSheetDialog? = null
+    private var tocAdapter: TocAdapter? = null
+    private var tocRecycler: RecyclerView? = null
+    private var tocFlatLabels: Array<String>? = null
+    private val tocFlatLocators: MutableList<Locator?> = mutableListOf()
+    private var tocSelectedIndex: Int = -1
 
     private val assetRetriever by lazy { AssetRetriever(contentResolver, DefaultHttpClient()) }
     private val publicationOpener by lazy {
@@ -104,12 +130,36 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             onBackPressedDispatcher.onBackPressed()
         }
 
+        // bookmark toggle (top-right)
+        findViewById<ImageView>(R.id.btn_bookmark_toggle).setOnClickListener {
+            toggleBookmark()
+        }
+
+        // tooltips for accessibility and desktop hover
+        ViewCompat.setTooltipText(findViewById(R.id.btn_back), getString(R.string.cd_back))
+        ViewCompat.setTooltipText(findViewById(R.id.btn_bookmark_toggle), getString(R.string.cd_bookmark_toggle))
+
         setupSettingsPanel()
+        // Apply initial typeface according to stored preference
+        applyTypefaceToReaderUI()
+
+        // bookmarks panel trigger (bottom bar)
+        findViewById<View>(R.id.btn_bookmarks).setOnClickListener {
+            openBookmarksPanel()
+        }
+        // TOC panel trigger (bottom-left)
+        findViewById<View>(R.id.btn_toc).setOnClickListener {
+            openTocPanel()
+        }
+        ViewCompat.setTooltipText(findViewById(R.id.btn_toc), getString(R.string.cd_open_toc))
+        ViewCompat.setTooltipText(findViewById(R.id.btn_bookmarks), getString(R.string.bookmarks_title))
 
         // Book Loading Logic
         val bookPath = intent.getStringExtra("BOOK_PATH") ?: return finish()
         val lastLocationJson = intent.getStringExtra("LAST_LOCATION_JSON")
         bookId = intent.getLongExtra("BOOK_ID", -1)
+        // Derive a stable string identifier for this book (use filename). This scopes bookmarks per-file.
+        bookKey = try { File(bookPath).name } catch (_: Exception) { bookPath }
 
         // If tests enabled fake navigator, avoid initializing Readium and populate minimal UI
         if (TestReaderInjector.useFakeNavigator) {
@@ -193,6 +243,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                             navigator.currentLocator.collect { locator ->
                                 _lastKnownLocator = locator
                                 updateUiWithLocator(locator)
+                                updateBookmarkIcon()
+                                updateTocSelection()
                             }
                         }
                     }
@@ -207,22 +259,49 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     private fun setupSettingsPanel() {
         val settingsContainer = findViewById<ComposeView>(R.id.font_controls_container)
-        val btnToggle = findViewById<View>(R.id.btn_font_settings)
 
         settingsContainer.setContent {
             val appColors = appColorsFor(libraryConfig.backgroundMode)
             val isDark = libraryConfig.backgroundMode.toInt() == 2
             val colorScheme = if (isDark) {
                 darkColorScheme().copy(
-                    background = Color(0xFF222222),
-                    surface = Color(0xFF222222),
-                    onBackground = Color(0xFFEEEEEE),
-                    onSurface = Color(0xFFEEEEEE)
+                    background = appColors.bg,
+                    surface = appColors.surface,
+                    onBackground = appColors.onBg,
+                    onSurface = appColors.onBg
                 )
             } else {
-                lightColorScheme(surface = Color.White)
+                lightColorScheme(
+                    background = appColors.bg,
+                    surface = appColors.surface,
+                    onBackground = appColors.onBg,
+                    onSurface = appColors.onBg
+                )
             }
-            MaterialTheme(colorScheme = colorScheme) {
+            // Build typography for overlay using the same runtime font detection
+            val baseTypography = Typography()
+            val ctx = this@ReaderActivity
+            val resId = ctx.resources.getIdentifier("literata_regular", "font", ctx.packageName)
+            val chosenFamily = if (resId != 0) FontFamily(Font(resId)) else FontFamily.Default
+            val typography = if (libraryConfig.fontChoice.toInt() == 1) baseTypography.copy(
+                displayLarge = baseTypography.displayLarge.copy(fontFamily = chosenFamily),
+                displayMedium = baseTypography.displayMedium.copy(fontFamily = chosenFamily),
+                displaySmall = baseTypography.displaySmall.copy(fontFamily = chosenFamily),
+                headlineLarge = baseTypography.headlineLarge.copy(fontFamily = chosenFamily),
+                headlineMedium = baseTypography.headlineMedium.copy(fontFamily = chosenFamily),
+                headlineSmall = baseTypography.headlineSmall.copy(fontFamily = chosenFamily),
+                titleLarge = baseTypography.titleLarge.copy(fontFamily = chosenFamily),
+                titleMedium = baseTypography.titleMedium.copy(fontFamily = chosenFamily),
+                titleSmall = baseTypography.titleSmall.copy(fontFamily = chosenFamily),
+                bodyLarge = baseTypography.bodyLarge.copy(fontFamily = chosenFamily),
+                bodyMedium = baseTypography.bodyMedium.copy(fontFamily = chosenFamily),
+                bodySmall = baseTypography.bodySmall.copy(fontFamily = chosenFamily),
+                labelLarge = baseTypography.labelLarge.copy(fontFamily = chosenFamily),
+                labelMedium = baseTypography.labelMedium.copy(fontFamily = chosenFamily),
+                labelSmall = baseTypography.labelSmall.copy(fontFamily = chosenFamily)
+            ) else baseTypography
+
+            MaterialTheme(colorScheme = colorScheme, typography = typography) {
                 CompositionLocalProvider(LocalAppColors provides appColors) {
                     ReaderTextSettings(
                         libraryConfig = libraryConfig,
@@ -232,10 +311,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             }
         }
 
-        btnToggle.setOnClickListener {
-            isFontBarVisible = !isFontBarVisible
-            settingsContainer.visibility = if (isFontBarVisible) View.VISIBLE else View.GONE
-        }
+        // The in-reader font controls remain in the layout but are not toggled from a reader button.
+        // Font selection is persisted in `LibraryConfig` and applied via `applyReaderPreferences()`/`applyTypefaceToReaderUI()`.
     }
 
     private fun applyReaderPreferences() {
@@ -258,6 +335,496 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, Bold=${libraryConfig.forceBold}, PublisherStyles=${newPreferences.publisherStyles}")
         navigator?.submitPreferences(newPreferences)
         testNavigator?.submitPreferences(newPreferences)
+        // Apply the selected font to the reader UI elements (header/footer/menu)
+        applyTypefaceToReaderUI()
+    }
+
+    private fun isCurrentLocatorBookmarked(): Boolean {
+        val locator = _lastKnownLocator ?: return false
+        val locatorJson = locator.toJSON().toString()
+        return bookmarkStore.isBookmarkedForBookKey(bookKey, locatorJson)
+    }
+
+    private fun updateBookmarkIcon() {
+        try {
+            val btn = findViewById<ImageView>(R.id.btn_bookmark_toggle)
+            val isBookmarked = isCurrentLocatorBookmarked()
+            btn.setImageResource(if (isBookmarked) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark_outline)
+        } catch (t: Throwable) {
+            // ignore
+        }
+    }
+
+    private fun updateTocSelection() {
+        try {
+            val adapter = tocAdapter ?: return
+            val recycler = tocRecycler ?: return
+            val current = _lastKnownLocator ?: return
+            val currentHref = current.href?.toString() ?: return
+
+            // try to find by href prefix first
+            var sel = tocFlatLocators.indexOfFirst { it?.href?.toString()?.startsWith(currentHref) == true }
+
+            if (sel < 0) {
+                val currProg = current.locations.totalProgression ?: 0.0
+                var bestIdx = -1
+                var bestDiff = Double.MAX_VALUE
+                for (i in tocFlatLocators.indices) {
+                    val loc = tocFlatLocators[i] ?: continue
+                    val prog = loc.locations.totalProgression ?: continue
+                    val diff = kotlin.math.abs(currProg - prog)
+                    if (diff < bestDiff) { bestDiff = diff; bestIdx = i }
+                }
+                sel = bestIdx
+            }
+
+            if (sel >= 0 && sel < adapter.itemCount) {
+                adapter.select(sel)
+                recycler.scrollToPosition(sel)
+                tocSelectedIndex = sel
+            }
+        } catch (t: Throwable) {
+            // ignore
+        }
+    }
+
+    private fun toggleBookmark() {
+        val locator = _lastKnownLocator
+        if (locator == null) {
+            Toast.makeText(this, getString(R.string.no_bookmarks), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val locatorJson = locator.toJSON().toString()
+        val href = locator.href.toString()
+        val prog = locator.locations.totalProgression ?: 0.0
+        val title = locator.title
+        val now = System.currentTimeMillis()
+        if (bookmarkStore.isBookmarkedForBookKey(bookKey, locatorJson)) {
+            bookmarkStore.removeBookmarkForBookKey(bookKey, locatorJson)
+            Toast.makeText(this, getString(R.string.bookmark_removed), Toast.LENGTH_SHORT).show()
+        } else {
+            val bm = Bookmark(locatorJson, href, prog, title, now)
+            bookmarkStore.addBookmarkForBookKey(bookKey, bm)
+            Toast.makeText(this, getString(R.string.bookmark_added), Toast.LENGTH_SHORT).show()
+        }
+        updateBookmarkIcon()
+    }
+
+    private fun openBookmarksPanel() {
+        val list = bookmarkStore.listBookmarksForBookKey(bookKey)
+        if (list.isEmpty()) {
+            Toast.makeText(this, getString(R.string.no_bookmarks), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val labels = list.mapIndexed { idx, bm ->
+            "Segnalibro ${idx + 1}"
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.bookmarks_title))
+            .setItems(labels) { dialog, which ->
+                val chosen = list[which]
+                // Show action dialog: Apri or Rimuovi
+                val detailTitle = (chosen.chapterTitle ?: chosen.href) ?: labels[which]
+                AlertDialog.Builder(this)
+                    .setTitle("${labels[which]} — $detailTitle")
+                    .setItems(arrayOf(getString(R.string.open_bookmark), getString(R.string.remove_bookmark))) { d, index ->
+                        when (index) {
+                            0 -> {
+                                // Open
+                                try {
+                                    val locatorObj = try { Locator.fromJSON(JSONObject(chosen.locatorJson)) } catch (e: Exception) { null }
+                                    val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+                                    if (navigator != null && locatorObj != null) {
+                                        lifecycleScope.launch { navigator.go(locatorObj, animated = false) }
+                                    }
+                                } catch (t: Throwable) { /* ignore */ }
+                            }
+                            1 -> {
+                                // Remove
+                                bookmarkStore.removeBookmarkForBookKey(bookKey, chosen.locatorJson)
+                                Toast.makeText(this, getString(R.string.bookmark_removed), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    .show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun applyTypefaceToReaderUI() {
+        try {
+            val resId = resources.getIdentifier("literata_regular", "font", packageName)
+            val tf: Typeface? = if (libraryConfig.fontChoice.toInt() == 1 && resId != 0) {
+                ResourcesCompat.getFont(this, resId)
+            } else Typeface.DEFAULT
+
+            val header = findViewById<TextView>(R.id.immersive_header_title)
+            val footer = findViewById<TextView>(R.id.immersive_footer_text)
+            val page = findViewById<TextView>(R.id.menu_page_text)
+            val title = findViewById<TextView>(R.id.menu_book_title)
+            val author = findViewById<TextView>(R.id.menu_book_author)
+
+            header.typeface = tf
+            footer.typeface = tf
+            page.typeface = tf
+            title.typeface = tf
+            author.typeface = tf
+        } catch (t: Throwable) {
+            Log.w(_tag, "Impossibile applicare il font personalizzato: ${t.message}")
+        }
+    }
+
+    // --- TOC extraction & panel -------------------------------------------------
+    private data class TocNode(val title: String?, val href: String?, val children: List<TocNode> = emptyList())
+
+    private fun extractToc(pub: Publication?): List<TocNode> {
+        if (pub == null) return emptyList()
+        try {
+            val cls = pub.javaClass
+            val candidateNames = arrayOf("getTableOfContents", "getToc", "getTableOfContent", "tableOfContents")
+            var tocObj: Any? = null
+            for (name in candidateNames) {
+                try {
+                    val m = cls.getMethod(name)
+                    tocObj = m.invoke(pub)
+                    if (tocObj != null) break
+                } catch (nm: NoSuchMethodException) {
+                    // try next
+                }
+            }
+            if (tocObj == null) return emptyList()
+            if (tocObj !is List<*>) return emptyList()
+
+            fun mapLink(linkObj: Any?): TocNode? {
+                if (linkObj == null) return null
+                try {
+                    val lcls = linkObj.javaClass
+                    val getTitle = try { lcls.getMethod("getTitle") } catch (_: Exception) { null }
+                    val getHref = try { lcls.getMethod("getHref") } catch (_: Exception) { null }
+                    val getChildren = try { lcls.getMethod("getChildren") } catch (_: Exception) { null }
+                    val title = getTitle?.invoke(linkObj) as? String
+                    val hrefObj = getHref?.invoke(linkObj)
+                    val hrefStr = hrefObj?.toString()
+                    val children = mutableListOf<TocNode>()
+                    if (getChildren != null) {
+                        val ch = getChildren.invoke(linkObj)
+                        if (ch is List<*>) {
+                            for (c in ch) {
+                                val mapped = mapLink(c)
+                                if (mapped != null) children.add(mapped)
+                            }
+                        }
+                    }
+                    return TocNode(title, hrefStr, children)
+                } catch (t: Throwable) {
+                    return null
+                }
+            }
+
+            val out = mutableListOf<TocNode>()
+            for (item in tocObj as List<*>) {
+                val node = mapLink(item)
+                if (node != null) out.add(node)
+            }
+            return out
+        } catch (t: Throwable) {
+            Log.w(_tag, "TOC extract failed: ${t.message}")
+            return emptyList()
+        }
+    }
+
+    private fun flattenToc(nodes: List<TocNode>, depth: Int = 0, out: MutableList<Pair<TocNode, Int>>) {
+        for (n in nodes) {
+            out.add(n to depth)
+            if (n.children.isNotEmpty()) flattenToc(n.children, depth + 1, out)
+        }
+    }
+
+    // Normalize hrefs for matching: strip fragment, leading ./ or /, and trim
+    private fun normalizeHrefForMatch(href: String?): String? {
+        if (href == null) return null
+        var h = href
+        // remove fragment
+        val hashIdx = h.indexOf('#')
+        if (hashIdx >= 0) h = h.substring(0, hashIdx)
+        // remove query
+        val qIdx = h.indexOf('?')
+        if (qIdx >= 0) h = h.substring(0, qIdx)
+        h = h.trim()
+        h = h.removePrefix("./").removePrefix("/")
+        // decode percent-encoding if present
+        try {
+            h = URLDecoder.decode(h, "UTF-8")
+        } catch (_: Exception) { }
+        // strip common extensions used in EPUBs
+        h = h.replace(Regex("\\.(x?html?|xml|ncx|opf|htm|xht)", RegexOption.IGNORE_CASE), "")
+        return if (h.isEmpty()) null else h
+    }
+
+    // Heuristic matcher: try exact, suffix, contains, last-segment match
+    private fun findBestPositionForHref(href: String?, positions: List<Locator>): Locator? {
+        if (href == null) return null
+        val target = normalizeHrefForMatch(href) ?: return null
+
+        val normalized = positions.map { pos ->
+            val ph = pos.href?.toString()
+            Pair(pos, normalizeHrefForMatch(ph))
+        }
+
+        // exact
+        normalized.firstOrNull { it.second == target }?.let { return it.first }
+
+        // endsWith (covers paths like "OPS/ch1.xhtml" vs "ch1.xhtml")
+        normalized.firstOrNull { it.second != null && it.second!!.endsWith(target) }?.let { return it.first }
+
+        // contains
+        normalized.firstOrNull { it.second != null && it.second!!.contains(target) }?.let { return it.first }
+
+        // last segment match
+        val targetLast = target.substringAfterLast('/')
+        normalized.firstOrNull { it.second != null && it.second!!.substringAfterLast('/') == targetLast }?.let { return it.first }
+
+        return null
+    }
+
+    private fun getRuntimeTypeface(): Typeface? {
+        val resId = resources.getIdentifier("literata_regular", "font", packageName)
+        return if (libraryConfig.fontChoice.toInt() == 1 && resId != 0) {
+            try { ResourcesCompat.getFont(this, resId) } catch (_: Exception) { null }
+        } else null
+    }
+
+    // RecyclerView adapter for the TOC bottom sheet (supports headers and items)
+    private inner class TocAdapter(
+        private val items: List<Pair<TocNode, Int>>,
+        private val onClick: (Int) -> Unit
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        var selectedIndex: Int = -1
+
+        private val VIEW_TYPE_HEADER = 0
+        private val VIEW_TYPE_ITEM = 1
+
+        // Precompute theme colors and runtime typeface
+        private val appColors = appColorsFor(libraryConfig.backgroundMode)
+        private val selectedBgColor = appColors.selectedRowBackground.toArgb()
+        private val textColorInt = appColors.onBg.toArgb()
+        private val iconColorInt = appColors.onBg.toArgb()
+        private val runtimeTf = getRuntimeTypeface()
+
+        inner class HeaderVH(val view: View) : RecyclerView.ViewHolder(view) {
+            val title: TextView = view.findViewById(R.id.toc_item_title)
+            init {
+                view.setOnClickListener { val pos = bindingAdapterPosition; if (pos != RecyclerView.NO_POSITION) onClick(pos) }
+            }
+        }
+
+        inner class ItemVH(val view: View) : RecyclerView.ViewHolder(view) {
+            val icon: ImageView = view.findViewById(R.id.toc_item_icon)
+            val title: TextView = view.findViewById(R.id.toc_item_title)
+            init {
+                view.setOnClickListener { val pos = bindingAdapterPosition; if (pos != RecyclerView.NO_POSITION) onClick(pos) }
+            }
+        }
+
+        override fun getItemViewType(position: Int): Int {
+            val (node, depth) = items[position]
+            return if (depth == 0 && node.children.isNotEmpty()) VIEW_TYPE_HEADER else VIEW_TYPE_ITEM
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            return if (viewType == VIEW_TYPE_HEADER) {
+                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_toc_header, parent, false)
+                HeaderVH(v)
+            } else {
+                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_toc, parent, false)
+                ItemVH(v)
+            }
+        }
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            val (node, depth) = items[position]
+            val titleStr = node.title ?: node.href ?: "-"
+
+            val base = resources.getDimensionPixelSize(R.dimen.spacing_16)
+            val padStart = base + depth * (base / 2)
+
+            if (holder is HeaderVH) {
+                holder.title.text = titleStr
+                holder.title.setPadding(padStart, holder.title.paddingTop, holder.title.paddingRight, holder.title.paddingBottom)
+                holder.title.contentDescription = titleStr
+                holder.title.setTextColor(textColorInt)
+                runtimeTf?.let { holder.title.typeface = it }
+                // header styling
+                if (position == selectedIndex) {
+                    holder.view.setBackgroundColor(selectedBgColor)
+                } else {
+                    holder.view.setBackgroundResource(0)
+                }
+            } else if (holder is ItemVH) {
+                holder.title.text = titleStr
+                holder.title.setPadding(padStart, holder.title.paddingTop, holder.title.paddingRight, holder.title.paddingBottom)
+                holder.title.contentDescription = titleStr
+                holder.title.setTextColor(textColorInt)
+                runtimeTf?.let { holder.title.typeface = it }
+
+                // icon: parents show chevron, leaves show toc/book icon
+                if (node.children.isNotEmpty()) {
+                    holder.icon.setImageResource(R.drawable.ic_expand_more)
+                } else {
+                    holder.icon.setImageResource(R.drawable.ic_toc)
+                }
+                holder.icon.setColorFilter(iconColorInt)
+
+                if (position == selectedIndex) {
+                    holder.view.setBackgroundColor(selectedBgColor)
+                    holder.title.setTypeface(null, Typeface.BOLD)
+                } else {
+                    holder.view.setBackgroundResource(0)
+                    holder.title.setTypeface(null, Typeface.NORMAL)
+                }
+            }
+        }
+
+        override fun getItemCount(): Int = items.size
+
+        fun select(idx: Int) {
+            val prev = selectedIndex
+            selectedIndex = idx
+            if (prev >= 0) notifyItemChanged(prev)
+            if (idx >= 0) notifyItemChanged(idx)
+        }
+    }
+
+    private fun openTocPanel() {
+        val toc = extractToc(publication)
+        if (toc.isEmpty()) {
+            Toast.makeText(this, "Indice non disponibile", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val flat = mutableListOf<Pair<TocNode, Int>>()
+        flattenToc(toc, 0, flat)
+        val labels = flat.map { (node, depth) ->
+            val title = node.title ?: node.href ?: "-"
+            "${"\u00A0".repeat(depth * 2)}$title"
+        }.toTypedArray()
+
+        // store labels so other code can reference them
+        tocFlatLabels = labels
+        tocFlatLocators.clear()
+        for (i in labels.indices) tocFlatLocators.add(null)
+
+        val pub = publication
+        if (pub == null) {
+            Toast.makeText(this, "Impossibile navigare al capitolo selezionato", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Compute mapping between TOC hrefs and publication positions in background
+        lifecycleScope.launch {
+            val hrefs = flat.map { it.first.href }
+            val positions = try { pub.positions() } catch (_: Throwable) { emptyList<Locator>() }
+
+            val matched = hrefs.map { href ->
+                findBestPositionForHref(href, positions)
+            }
+
+            tocFlatLocators.clear()
+            tocFlatLocators.addAll(matched)
+
+            // determine selected index based on current locator
+            val current = _lastKnownLocator
+            var selected = -1
+            if (current != null) {
+                val currentHref = current.href?.toString()
+                val currentProg = current.locations.totalProgression ?: 0.0
+                if (currentHref != null) {
+                    selected = matched.indexOfFirst { it?.href?.toString()?.startsWith(currentHref) == true }
+                }
+                if (selected < 0) {
+                    // fallback to nearest progression
+                    var bestIdx = -1
+                    var bestDiff = Double.MAX_VALUE
+                    for (i in matched.indices) {
+                        val m = matched[i] ?: continue
+                        val prog = m.locations.totalProgression ?: continue
+                        val diff = kotlin.math.abs(currentProg - prog)
+                        if (diff < bestDiff) { bestDiff = diff; bestIdx = i }
+                    }
+                    selected = bestIdx
+                }
+            }
+
+            tocSelectedIndex = selected
+
+            // Show bottom-sheet on main thread with a RecyclerView for better UX
+            withContext(Dispatchers.Main) {
+                val dialog = BottomSheetDialog(this@ReaderActivity)
+                val content = layoutInflater.inflate(R.layout.bottom_sheet_toc, null)
+                val recycler = content.findViewById<RecyclerView>(R.id.toc_recycler)
+
+                val adapter = TocAdapter(flat) { which ->
+                    val chosenLocator = tocFlatLocators.getOrNull(which)
+                    val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+                    if (navigator != null && chosenLocator != null) {
+                        lifecycleScope.launch { navigator.go(chosenLocator, animated = false) }
+                        dialog.dismiss()
+                    } else {
+                        lifecycleScope.launch {
+                            try {
+                                val pos = try { pub.positions() } catch (_: Throwable) { emptyList<Locator>() }
+                                val target = findBestPositionForHref(hrefs[which], pos)
+                                if (target != null) {
+                                    val nav = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
+                                    if (nav != null) nav.go(target, animated = false)
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@ReaderActivity, getString(R.string.toc_navigation_failed), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } catch (t: Throwable) {
+                                Log.w(_tag, "TOC navigation error: ${t.message}")
+                            }
+                        }
+                        dialog.dismiss()
+                    }
+                }
+
+                recycler.layoutManager = LinearLayoutManager(this@ReaderActivity)
+                recycler.adapter = adapter
+
+                // set initial selection and expose adapter/recycler for updates
+                adapter.select(tocSelectedIndex)
+                if (tocSelectedIndex >= 0) recycler.scrollToPosition(tocSelectedIndex)
+
+                dialog.setContentView(content)
+                dialog.setOnDismissListener {
+                    tocDialog = null
+                    tocAdapter = null
+                    tocRecycler = null
+                }
+
+                tocDialog = dialog
+                tocAdapter = adapter
+                tocRecycler = recycler
+                dialog.show()
+
+                // expand sheet and animate entrance
+                val bottomSheet = dialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
+                if (bottomSheet != null) {
+                    try {
+                        // Apply reader theme background to the bottom sheet so it matches the reader theme
+                        try {
+                            val sheetColor = appColorsFor(libraryConfig.backgroundMode).bg.toArgb()
+                            bottomSheet.setBackgroundColor(sheetColor)
+                        } catch (_: Exception) { }
+                        val behavior = BottomSheetBehavior.from(bottomSheet)
+                        behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                    } catch (_: Exception) { }
+                }
+            }
+        }
     }
 
     private fun updateUiWithLocator(locator: Locator) {
@@ -325,7 +892,6 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val bottomBar = findViewById<View>(R.id.menu_bottom_bar)
         val immersiveFooter = findViewById<View>(R.id.immersive_footer)
         val fontContainer = findViewById<View>(R.id.font_controls_container)
-        val btnFontSettings = findViewById<View>(R.id.btn_font_settings)
 
         if (isMenuVisible) {
             topBar.visibility = View.VISIBLE
@@ -337,7 +903,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             immersiveFooter.visibility = View.VISIBLE
             isFontBarVisible = false
             fontContainer.visibility = View.GONE
-            btnFontSettings.rotation = 0f
+            // font toggle removed from UI; nothing to reset
         }
     }
 
