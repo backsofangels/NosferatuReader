@@ -124,9 +124,90 @@ Quick file map for the recent edits:
 - `app/src/main/res/values/dimens.xml` — new tokens used throughout the UI.
 
 Acceptance test checklist for reviewers:
-1. `.\\gradlew.bat clean assembleDebug` should succeed.
-2. Open Settings -> `Colore Sfondo`: the selected row shows a subtle background, left accent dot, semibold label, and no trailing checkmark.
-3. Open Settings -> `Dimensione Testo`: ensure the option nearest to the saved custom reader font size is selected on app start.
-4. Toggle background modes (Default/Cream/Dark) and confirm the selected-row tint adapts and remains subtle.
-5. If `Literata` is selected and `app/src/main/res/font/literata_regular.ttf` exists, the Compose UI and reader overlay should use the custom font; header/footer TextViews in `ReaderActivity` should also switch to the Typeface.
+# AGENTS Guide - nosferatu-launcher
 
+## Scope
+- Single-module Android app (`:app`) with Gradle Kotlin/Compose + Room + Readium.
+- Main goal: local EPUB library sync + distraction-free reader UI.
+
+## Project map (start here)
+- `app/src/main/java/com/nosferatu/launcher/NosferatuApp.kt`: app-level wiring (Room DB, parser strategies, scanner, repository).
+- `app/src/main/java/com/nosferatu/launcher/repository/LibraryRepository.kt`: sync flow between filesystem and Room (now optionally persists TOC entries via `TocDao`).
+- `app/src/main/java/com/nosferatu/launcher/library/LibraryViewModel.kt`: UI state orchestration via Flows.
+- `app/src/main/java/com/nosferatu/launcher/library/LibraryConfig.kt`: persisted user settings (SharedPreferences `library_prefs`): root path, font size, line height, page margins, background mode, and `fontChoice`.
+- `app/src/main/java/com/nosferatu/launcher/ui/AppColors.kt`: app-wide color theme helpers — `AppColors`, `LocalAppColors`, `bgColorFor()`, `contentColorFor()`, `appColorsFor()`.
+- `app/src/main/java/com/nosferatu/launcher/ui/MainActivity.kt`: Compose home/library/settings shell + storage permission flow + background-mode theme wiring.
+- `app/src/main/java/com/nosferatu/launcher/ui/screens/settings/SettingsChoices.kt`: settings composables including `BackgroundColorOption`.
+- `app/src/main/java/com/nosferatu/launcher/reader/ReaderActivity.kt`: Readium reader, locator persistence, DB-first TOC loading, and TOC UI (bottom sheet).
+- `app/src/main/java/com/nosferatu/launcher/ui/components/fontsettings/TextSettingsOverlay.kt`: in-reader font size / line-height panel (`ReaderTextSettings`, `SliderRow`).
+- `app/src/main/java/com/nosferatu/launcher/data/Ebook.kt` and `EbookEntity.kt`: data model; `EbookEntity` now includes `tocImported: Boolean`.
+- `app/src/main/java/com/nosferatu/launcher/data/database/AppDatabase.kt`: Room DB container — now includes `TocEntryEntity` and DB version is 5.
+- `app/src/main/java/com/nosferatu/launcher/data/TocEntryEntity.kt`: new Room entity for persistent TOC rows.
+- `app/src/main/java/com/nosferatu/launcher/data/TocDao.kt`: new DAO for TOC rows (`getForBook`, `insertAll`, `deleteForBook`, `replaceForBook`).
+- `app/src/main/java/com/nosferatu/launcher/parser/TocParser.kt`: new parser to extract nav.xhtml / NCX TOC entries from EPUBs.
+- `app/src/main/java/com/nosferatu/launcher/parser/BookParser.kt`: metadata parsing orchestration (existing).
+
+## Architecture and data flow (updated)
+- Runtime DI is manual (no Hilt/Koin): `NosferatuApp` constructs `LibraryRepository`; activities create `LibraryViewModel` via `LibraryViewModelFactory`.
+- Library sync path: `LibraryViewModel.scanBooks()` -> `LibraryRepository.syncLibrary()` -> `LibraryScanner.scanDirectory()` -> `BookParser.parseMetadata()` -> `BookDao.insertBook()` → optionally `TocParser.parse()` → `TocDao.replaceForBook()`.
+- New behavior: during `syncLibrary()` the repository parses the book's TOC (EPUB nav.xhtml / NCX) and stores entries into `toc_entries` when `TocDao` is available. Books are marked with `tocImported=true` to avoid reprocessing unchanged files.
+
+## TOC Persistence (2026-04-05)
+Summary: TOC extraction and persistence were added to improve Reader startup and TOC panel responsiveness. Key facts:
+- Persistent TOC storage: `TocEntryEntity` + `TocDao` store flattened TOC rows per `bookId`.
+- Parsing: `TocParser` extracts navigational items from `nav.xhtml` (preferred) and falls back to NCX where required.
+- Sync behavior: `LibraryRepository.syncLibrary()` will skip TOC parsing for books already flagged with `tocImported=true` (and unchanged file timestamp). When persisted, the repository sets `tocImported=true` on the corresponding `EbookEntity`.
+- Reader: `ReaderActivity.openTocPanel()` now prefers DB-sourced TOC entries (fast), with a runtime extraction fallback when DB entries are missing.
+- Logging: extensive `Log.d/w/e` messages were added around TOC parsing, persistence, DB loads, matching statistics, and navigation actions to help debug TOC storage and rendering.
+
+## Build and developer workflows
+Keep the same Gradle commands. Note: there are new unit tests; prefer running the test task when making parser/DAO changes:
+```powershell
+.\gradlew.bat clean
+.\gradlew.bat assembleDebug
+.\gradlew.bat test --console=plain
+```
+
+## Codebase-specific conventions (notes)
+- DB uses Room with `fallbackToDestructiveMigration(true)` in `AppDatabase` (schema changes can wipe local data). The DB version was bumped to **5** to account for `tocImported` and `TocEntryEntity` additions.
+- New schema fields: `EbookEntity.tocImported: Boolean` (default `false`). Update any code constructing `EbookEntity` (use `toEntity()` helper in `Ebook.kt`).
+- New DAO query: `BookDao.isTocImported(path: String): Boolean?` is available to check whether a file's TOC has already been imported.
+- Logging: maintain `Log` tags and diagnostic messages when modifying sync/reader code paths — these messages are intentionally fine-grained for diagnosing TOC parse/persist/match problems.
+
+## Integrations and boundaries
+- No new external dependencies were added for TOC parsing — parser uses existing zip/OPF utilities and epublib helpers where applicable.
+
+## Guardrails for agents (updated)
+- Do not assume formats beyond EPUB are enabled until parser strategies are wired in `NosferatuApp.kt`.
+- If changing scan behavior, preserve current exclusion/depth semantics unless explicitly requested.
+- **DB schema changes:** the DB version is now 5 and `fallbackToDestructiveMigration(true)` is still enabled. If you need to preserve user data, add a Room `Migration` from previous versions instead of relying on destructive migration.
+- When touching `ReaderActivity.onCreate`, `setTheme()` **must** be called before `setContentView()`.
+- When adding reading preferences, update both navigator initialization and `applyReaderPreferences()`.
+- When adding or modifying TOC persistence or matching logic, keep these in mind:
+  - `LibraryRepository.syncLibrary()` now parses and persists TOC entries when `TocDao` is present and only for books where `tocImported` is false or the file changed.
+  - `ReaderActivity.openTocPanel()` prefers DB-sourced TOC and falls back to runtime extraction when needed.
+  - `BookDao.isTocImported(path)` is used to avoid redundant TOC work.
+
+## Recent TOC-related edits (quick file map)
+- `app/src/main/java/com/nosferatu/launcher/data/TocEntryEntity.kt` — new Room entity for TOC rows.
+- `app/src/main/java/com/nosferatu/launcher/data/TocDao.kt` — new DAO with `getForBook`, `insertAll`, `deleteForBook`, `replaceForBook`.
+- `app/src/main/java/com/nosferatu/launcher/parser/TocParser.kt` — new EPUB TOC extraction (nav.xhtml / NCX).
+- `app/src/main/java/com/nosferatu/launcher/repository/LibraryRepository.kt` — wired TOC parsing/persistence; added skip logic when `tocImported=true`; added detailed debug logging around parsing/persistence.
+- `app/src/main/java/com/nosferatu/launcher/data/EbookEntity.kt` — added `tocImported: Boolean` field.
+- `app/src/main/java/com/nosferatu/launcher/data/Ebook.kt` — `toEntity()` populates `tocImported=false` by default.
+- `app/src/main/java/com/nosferatu/launcher/data/BookDao.kt` — added `isTocImported(path: String): Boolean?`.
+- `app/src/main/java/com/nosferatu/launcher/reader/ReaderActivity.kt` — open TOC UI now loads from DB first and contains additional logging for loads, matches, and navigation.
+- `app/src/test/java/.../TocDaoTest.kt` and `app/src/test/java/.../TocParserTest.kt` — unit tests added for DAO and parser (Robolectric/unit tests).
+
+## Acceptance test checklist for reviewers (TOC additions)
+1. Run `.\gradlew.bat test --console=plain` — unit tests should pass (new DAO/parser tests included).
+2. Run `.\gradlew.bat assembleDebug` to build the app.
+3. Perform a full library sync with a sample EPUB that contains a `nav.xhtml`/NCX — verify that `toc_entries` table is populated and `books.tocImported` is set to `1` for the imported book.
+4. Open a book in the Reader: the TOC bottom sheet should open quickly (DB-sourced) and navigating entries should jump to the expected sections. Logs contain debug lines about DB loads and matched/unmatched counts.
+5. If you need to preserve existing user databases, implement a Room `Migration` from previous schema versions instead of relying on destructive migration.
+
+## Next steps & suggestions
+- If product requires non-destructive upgrades, I can add a Room `Migration` from v4→v5 that adds `tocImported` and the `toc_entries` table without losing data.
+- Add integration tests that run `LibraryRepository.syncLibrary()` against a temporary EPUB fixture and assert `toc_entries` + `books.tocImported` behavior.
+
+**Note:** This document is intentionally developer-facing. If you'd like, I can also add a short README section that describes how to inspect the `toc_entries` table (adb shell / Room inspector) and example log lines to look for when diagnosing TOC issues.
