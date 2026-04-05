@@ -99,6 +99,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             contentProtections = emptyList()
         )
     }
+    private val epubCacheManager by lazy { EpubCacheManager(this) }
 
     private var isMenuVisible = false
     private var isFontBarVisible = false
@@ -197,13 +198,19 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
         lifecycleScope.launch {
             try {
+                val readerStartTime = System.currentTimeMillis()
+                Log.d(_tag, "onCreate: reader startup BEGIN")
+
                 publication = openPublication(File(bookPath))
+                val pubOpenDuration = System.currentTimeMillis() - readerStartTime
+                Log.d(_tag, "onCreate: publication opened in ${pubOpenDuration}ms")
 
                 val initialLocator = lastLocationJson?.let {
                     try { Locator.fromJSON(JSONObject(it)) } catch (e: Exception) { null }
                 }
 
                 // Inizializziamo il navigatore con le preferenze attuali da LibraryConfig
+                val navigatorStartTime = System.currentTimeMillis()
                 val navigatorFactory = EpubNavigatorFactory(
                     publication = publication!!,
                     configuration = EpubNavigatorFactory.Configuration(
@@ -224,6 +231,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                     initialLocator = initialLocator,
                     listener = this@ReaderActivity
                 )
+                val navigatorDuration = System.currentTimeMillis() - navigatorStartTime
+                Log.d(_tag, "onCreate: navigator setup in ${navigatorDuration}ms")
 
                 supportFragmentManager.fragmentFactory = navigatorFactory
 
@@ -249,6 +258,9 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                         }
                     }
                 }
+
+                val totalDuration = System.currentTimeMillis() - readerStartTime
+                Log.d(_tag, "onCreate: READER STARTUP COMPLETE in ${totalDuration}ms")
 
             } catch (e: Exception) {
                 Log.e(_tag, "Errore fatale apertura libro: ${e.message}")
@@ -944,8 +956,37 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     }
 
     private suspend fun openPublication(file: File): Publication = withContext(Dispatchers.IO) {
-        val asset = assetRetriever.retrieve(file).getOrElse { throw Exception("Asset fallito") }
-        publicationOpener.open(asset, allowUserInteraction = true).getOrElse { throw Exception("Opener fallito") }
+        val startTime = System.currentTimeMillis()
+        Log.d(_tag, "openPublication: START - ${file.name}")
+
+        // Phase 1: Check if extracted cache is available (Phase 1 timing)
+        val cacheStartTime = System.currentTimeMillis()
+        val extractedPath = epubCacheManager.getExtractedPath(file)
+        val cacheLookupTime = System.currentTimeMillis() - cacheStartTime
+        
+        val sourceFile = extractedPath ?: file
+        Log.d(_tag, "openPublication: cache lookup ${cacheLookupTime}ms - using ${sourceFile.name}")
+
+        // Phase 2: Open publication from extracted cache or fallback to original
+        val openStartTime = System.currentTimeMillis()
+        val asset = assetRetriever.retrieve(sourceFile).getOrElse { 
+            Log.e(_tag, "openPublication: asset retrieval failed, falling back to source file")
+            assetRetriever.retrieve(file).getOrElse { throw Exception("Asset fallito") }
+        }
+        val assetRetrievalTime = System.currentTimeMillis() - openStartTime
+
+        // Phase 3: Open publication
+        val pubOpenStartTime = System.currentTimeMillis()
+        val pub = publicationOpener.open(asset, allowUserInteraction = true).getOrElse { 
+            throw Exception("Opener fallito") 
+        }
+        val pubOpenTime = System.currentTimeMillis() - pubOpenStartTime
+
+        val totalTime = System.currentTimeMillis() - startTime
+        Log.d(_tag, "openPublication: COMPLETE in ${totalTime}ms")
+        Log.d(_tag, "openPublication:   cache_lookup=${cacheLookupTime}ms asset_retrieval=${assetRetrievalTime}ms pub_open=${pubOpenTime}ms")
+
+        pub
     }
 
     private fun saveLocation(bookId: Long, locator: Locator?) {
