@@ -48,7 +48,8 @@ class NosferatuApp : Application() {
             bookDao = database.bookDao(),
             scanner = scanner,
             coverManager = coverManager,
-            libraryConfig = libraryConfig
+            libraryConfig = libraryConfig,
+            tocDao = database.tocDao()
         )
     }
 }

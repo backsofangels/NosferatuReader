@@ -6,10 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.nosferatu.launcher.data.BookDao
 import com.nosferatu.launcher.data.EbookEntity
+import com.nosferatu.launcher.data.TocDao
+import com.nosferatu.launcher.data.TocEntryEntity
 
-@Database(entities = [EbookEntity::class], version = 3, exportSchema = false)
+@Database(entities = [EbookEntity::class, TocEntryEntity::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
+    abstract fun tocDao(): TocDao
 
     companion object {
         @Volatile

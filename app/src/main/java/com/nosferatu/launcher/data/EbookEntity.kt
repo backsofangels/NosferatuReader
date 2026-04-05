@@ -14,4 +14,5 @@ data class EbookEntity(
     val coverPath: String? = null,
     val lastLocationJson: String? = null,
     val progression: Double = 0.0,
+    val tocImported: Boolean = false
 )

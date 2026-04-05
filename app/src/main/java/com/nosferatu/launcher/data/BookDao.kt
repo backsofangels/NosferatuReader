@@ -32,6 +32,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE filePath = :absolutePath")
     suspend fun getBookByPath(absolutePath: String): EbookEntity?
 
+    @Query("SELECT tocImported FROM books WHERE filePath = :path")
+    suspend fun isTocImported(path: String): Boolean?
+
     @Query("SELECT filePath FROM books")
     suspend fun getAllFilePaths(): List<String>
 

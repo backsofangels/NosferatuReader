@@ -697,38 +697,66 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     }
 
     private fun openTocPanel() {
-        val toc = extractToc(publication)
-        if (toc.isEmpty()) {
-            Toast.makeText(this, "Indice non disponibile", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val flat = mutableListOf<Pair<TocNode, Int>>()
-        flattenToc(toc, 0, flat)
-        val labels = flat.map { (node, depth) ->
-            val title = node.title ?: node.href ?: "-"
-            "${"\u00A0".repeat(depth * 2)}$title"
-        }.toTypedArray()
-
-        // store labels so other code can reference them
-        tocFlatLabels = labels
-        tocFlatLocators.clear()
-        for (i in labels.indices) tocFlatLocators.add(null)
-
-        val pub = publication
-        if (pub == null) {
-            Toast.makeText(this, "Impossibile navigare al capitolo selezionato", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Compute mapping between TOC hrefs and publication positions in background
+        // Try loading TOC from DB first, fall back to runtime extraction
         lifecycleScope.launch {
+            val repo = (application as NosferatuApp).repository
+
+            val dbEntries = try {
+                withContext(Dispatchers.IO) { repo.getTocEntriesForBook(bookId) }
+            } catch (t: Throwable) {
+                Log.w(_tag, "Failed to load TOC from DB: ${t.message}")
+                emptyList()
+            }
+
+            Log.d(_tag, "openTocPanel: loaded ${dbEntries.size} entries from DB for bookId=$bookId")
+
+            val tocNodes: List<TocNode> = if (dbEntries.isNotEmpty()) {
+                dbEntries.sortedBy { it.position }.map { TocNode(it.title, it.href, emptyList()) }
+            } else {
+                Log.d(_tag, "openTocPanel: DB empty, extracting runtime TOC from publication")
+                val runtime = extractToc(publication)
+                Log.d(_tag, "openTocPanel: runtime extract returned ${runtime.size} TOC nodes")
+                runtime
+            }
+
+            if (tocNodes.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ReaderActivity, "Indice non disponibile", Toast.LENGTH_SHORT).show()
+                }
+                return@launch
+            }
+
+            val flat = mutableListOf<Pair<TocNode, Int>>()
+            flattenToc(tocNodes, 0, flat)
+            val labels = flat.map { (node, depth) ->
+                val title = node.title ?: node.href ?: "-"
+                "${"\u00A0".repeat(depth * 2)}$title"
+            }.toTypedArray()
+
+            // store labels so other code can reference them
+            tocFlatLabels = labels
+            tocFlatLocators.clear()
+            for (i in labels.indices) tocFlatLocators.add(null)
+
+            val pub = publication
+            if (pub == null) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ReaderActivity, "Impossibile navigare al capitolo selezionato", Toast.LENGTH_SHORT).show()
+                }
+                return@launch
+            }
+
+            // Compute mapping between TOC hrefs and publication positions in background
             val hrefs = flat.map { it.first.href }
             val positions = try { pub.positions() } catch (_: Throwable) { emptyList<Locator>() }
 
             val matched = hrefs.map { href ->
                 findBestPositionForHref(href, positions)
             }
+
+            val matchedCount = matched.count { it != null }
+            val unmatchedCount = matched.count { it == null }
+            Log.d(_tag, "openTocPanel: matched positions=$matchedCount unmatched=$unmatchedCount for ${hrefs.size} hrefs")
 
             tocFlatLocators.clear()
             tocFlatLocators.addAll(matched)
@@ -765,19 +793,27 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 val recycler = content.findViewById<RecyclerView>(R.id.toc_recycler)
 
                 val adapter = TocAdapter(flat) { which ->
+                    Log.d(_tag, "openTocPanel: user selected TOC index=$which")
                     val chosenLocator = tocFlatLocators.getOrNull(which)
                     val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
                     if (navigator != null && chosenLocator != null) {
-                        lifecycleScope.launch { navigator.go(chosenLocator, animated = false) }
+                        lifecycleScope.launch {
+                            Log.d(_tag, "openTocPanel: navigating to locator href=${chosenLocator.href} progression=${chosenLocator.locations.totalProgression}")
+                            navigator.go(chosenLocator, animated = false)
+                        }
                         dialog.dismiss()
                     } else {
                         lifecycleScope.launch {
                             try {
+                                Log.d(_tag, "openTocPanel: fallback navigation for index=$which, href=${hrefs.getOrNull(which)}")
                                 val pos = try { pub.positions() } catch (_: Throwable) { emptyList<Locator>() }
                                 val target = findBestPositionForHref(hrefs[which], pos)
                                 if (target != null) {
                                     val nav = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
-                                    if (nav != null) nav.go(target, animated = false)
+                                    if (nav != null) {
+                                        Log.d(_tag, "openTocPanel: fallback resolved locator href=${target.href} progression=${target.locations.totalProgression}")
+                                        nav.go(target, animated = false)
+                                    }
                                 } else {
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(this@ReaderActivity, getString(R.string.toc_navigation_failed), Toast.LENGTH_SHORT).show()
