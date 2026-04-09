@@ -16,10 +16,12 @@ release.keystore
 *.jks
 
 # Others
-docs/
+docs/*.md
 
 # Log/OS Files
 *.log
+*.logcat
+*.csv
 app/release*
 app/instrumentation*
 

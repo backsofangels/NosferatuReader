@@ -237,6 +237,12 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 val isLowMemoryDevice = isLowMemoryDevice()
                 val shouldDisablePublisherStyles = isLowMemoryDevice
                 Log.d(_tag, "Readium init: lowMemoryDevice=$isLowMemoryDevice, disablePublisherStyles=$shouldDisablePublisherStyles")
+                // Log reader vs app theme for debugging persistence
+                try {
+                    Log.d(_tag, "Reader theme check: readerConfig.readingBackgroundMode=${readerConfig.readingBackgroundMode}, libraryConfig.backgroundMode=${libraryConfig.backgroundMode}")
+                } catch (t: Throwable) {
+                    Log.w(_tag, "Reader theme check failed: ${t.message}")
+                }
                 
                 val navigatorFactory = EpubNavigatorFactory(
                     publication = publication!!,
@@ -273,6 +279,13 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
                 val navigator = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment
                 navigator?.addInputListener(readerInputListener)
+
+                // Ensure restored navigator receives current reader preferences (handles fragment restore path)
+                try {
+                    applyReaderPreferences()
+                } catch (t: Throwable) {
+                    Log.w(_tag, "applyReaderPreferences on restored navigator failed: ${t.message}")
+                }
 
                 if (navigator != null) {
                     setupProgressBarSeek(navigator)
