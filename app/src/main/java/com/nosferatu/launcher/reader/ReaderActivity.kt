@@ -35,6 +35,7 @@ import android.graphics.Typeface
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,10 +73,21 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.graphics.Color as AndroidColor
+import android.app.ActivityManager
+import android.content.Context
+import android.util.Base64
+import android.graphics.drawable.ColorDrawable
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.nosferatu.launcher.library.ReaderConfig
+import com.nosferatu.launcher.ui.components.common.SingleChoiceOptionRow
+import androidx.compose.foundation.layout.Column
 
 @OptIn(ExperimentalReadiumApi::class)
 class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     private val _tag = "ReaderActivity"
+    private val LOW_MEMORY_THRESHOLD_MB = 1500  // 1.5 GB threshold for lean mode
+    // Internal exception used only for control-flow to indicate asset was used
+    private class AssetUsedException : Exception()
     private var publication: Publication? = null
     private val viewModel: LibraryViewModel by viewModels {
         LibraryViewModelFactory((application as NosferatuApp).repository)
@@ -105,6 +117,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     private var isFontBarVisible = false
     private var isSeeking = false
     private val libraryConfig by lazy { LibraryConfig(this) }
+    private val readerConfig by lazy { ReaderConfig(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -139,6 +152,14 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         // tooltips for accessibility and desktop hover
         ViewCompat.setTooltipText(findViewById(R.id.btn_back), getString(R.string.cd_back))
         ViewCompat.setTooltipText(findViewById(R.id.btn_bookmark_toggle), getString(R.string.cd_bookmark_toggle))
+        // reader settings button tooltip and click
+        try {
+            val settingsBtn = findViewById<ImageView>(R.id.btn_reader_settings)
+            ViewCompat.setTooltipText(settingsBtn, getString(R.string.cd_reader_settings))
+            settingsBtn.setOnClickListener { v -> showReaderSettingsPopup(v) }
+        } catch (t: Throwable) {
+            // if the view is not present for any reason, ignore
+        }
 
         setupSettingsPanel()
         // Apply initial typeface according to stored preference
@@ -211,6 +232,12 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
                 // Inizializziamo il navigatore con le preferenze attuali da LibraryConfig
                 val navigatorStartTime = System.currentTimeMillis()
+                
+                // 🔴 LOW-MEMORY DETECTION: rilevare se il device ha memoria limitata
+                val isLowMemoryDevice = isLowMemoryDevice()
+                val shouldDisablePublisherStyles = isLowMemoryDevice
+                Log.d(_tag, "Readium init: lowMemoryDevice=$isLowMemoryDevice, disablePublisherStyles=$shouldDisablePublisherStyles")
+                
                 val navigatorFactory = EpubNavigatorFactory(
                     publication = publication!!,
                     configuration = EpubNavigatorFactory.Configuration(
@@ -219,9 +246,11 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 ).createFragmentFactory(
                     initialPreferences = EpubPreferences(
                         fontSize = libraryConfig.fontSizeScale.toDouble(),
-                        fontWeight = if (libraryConfig.forceBold) 2.0 else null,
+                        // 🔴 OPTIMIZATION: Disable bold on low-memory (reduces glyph rendering complexity)
+                        fontWeight = if (libraryConfig.forceBold && !isLowMemoryDevice) 2.0 else null,
                         columnCount = ColumnCount.ONE,
-                        publisherStyles = true,
+                        // 🔴 OPTIMIZATION: Disabilitare publisher styles su device low-end
+                        publisherStyles = !shouldDisablePublisherStyles,
                         theme = when (libraryConfig.backgroundMode.toInt()) {
                             1 -> Theme.SEPIA
                             2 -> Theme.DARK
@@ -247,6 +276,12 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
                 if (navigator != null) {
                     setupProgressBarSeek(navigator)
+                    // 🎨 Initial CSS injection (theme-aware)
+                    try {
+                        injectThemeAwareCss()
+                    } catch (t: Throwable) {
+                        Log.w(_tag, "injectThemeAwareCss initial injection failed: ${t.message}")
+                    }
                     launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             navigator.currentLocator.collect { locator ->
@@ -269,10 +304,39 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         }
     }
 
+    /**
+     * 🔴 OPTIMIZATION: Rilevare se il device è low-memory (< 1.5 GB RAM)
+     * Su device Tegra 3 con 1GB RAM, Readium non riesce a gestire i tile del rendering
+     * quando publisher styles sono abilitati.
+     */
+    private fun isLowMemoryDevice(): Boolean {
+        return try {
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memInfo)
+            
+            val totalMemoryMB = memInfo.totalMem / (1024 * 1024)
+            val availableMemoryMB = memInfo.availMem / (1024 * 1024)
+            val result = totalMemoryMB < LOW_MEMORY_THRESHOLD_MB
+            
+            // 🔴 DETAILED LOGGING: Per diagnostica memory pressure su Tegra 3
+            Log.d(_tag, "📊 MEMORY STATUS: Total=${totalMemoryMB}MB, Available=${availableMemoryMB}MB, LowMemoryMode=$result")
+            if (availableMemoryMB < 300) {
+                Log.w(_tag, "⚠️ CRITICAL: Available memory only ${availableMemoryMB}MB - expect performance issues")
+            }
+            
+            result
+        } catch (e: Exception) {
+            Log.w(_tag, "Failed to check system memory: ${e.message}", e)
+            false
+        }
+    }
+
     private fun setupSettingsPanel() {
         val settingsContainer = findViewById<ComposeView>(R.id.font_controls_container)
 
         settingsContainer.setContent {
+            // Use the global app background for the in-reader font controls
             val appColors = appColorsFor(libraryConfig.backgroundMode)
             val isDark = libraryConfig.backgroundMode.toInt() == 2
             val colorScheme = if (isDark) {
@@ -327,28 +391,295 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         // Font selection is persisted in `LibraryConfig` and applied via `applyReaderPreferences()`/`applyTypefaceToReaderUI()`.
     }
 
+    private fun showReaderSettingsPopup(anchor: View) {
+        try {
+            val content = layoutInflater.inflate(R.layout.reader_settings_popup, null)
+            val compose = content.findViewById<ComposeView>(R.id.reader_settings_compose)
+
+            val dialog = BottomSheetDialog(this)
+
+            // Use a composition strategy that disposes when the view is detached to avoid leaks
+            try { compose.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow) } catch (_: Exception) { }
+
+            compose.setContent {
+                // Use global app theme colors for the settings panel UI
+                val selectionBgMode = if (readerConfig.readingBackgroundMode >= 0f) readerConfig.readingBackgroundMode.toInt() else libraryConfig.backgroundMode.toInt()
+                val appColors = appColorsFor(libraryConfig.backgroundMode)
+                val isDark = libraryConfig.backgroundMode.toInt() == 2
+                val colorScheme = if (isDark) {
+                    darkColorScheme().copy(
+                        background = appColors.bg,
+                        surface = appColors.surface,
+                        onBackground = appColors.onBg,
+                        onSurface = appColors.onBg
+                    )
+                } else {
+                    lightColorScheme(
+                        background = appColors.bg,
+                        surface = appColors.surface,
+                        onBackground = appColors.onBg,
+                        onSurface = appColors.onBg
+                    )
+                }
+
+                MaterialTheme(colorScheme = colorScheme) {
+                    CompositionLocalProvider(LocalAppColors provides appColors) {
+                        Column {
+                            ReaderTextSettings(
+                                libraryConfig = libraryConfig,
+                                onPreferenceChanged = { applyReaderPreferences() }
+                            )
+                            val whiteLabel = stringResource(id = R.string.color_white)
+                            val creamLabel = stringResource(id = R.string.color_cream)
+                            val blackLabel = stringResource(id = R.string.color_black)
+
+                            SingleChoiceOptionRow(label = whiteLabel, selected = (selectionBgMode == 0), onClick = {
+                                readerConfig.updateReadingBackgroundMode(0f)
+                                applyReaderPreferences()
+                                dialog.dismiss()
+                            })
+                            SingleChoiceOptionRow(label = creamLabel, selected = (selectionBgMode == 1), onClick = {
+                                readerConfig.updateReadingBackgroundMode(1f)
+                                applyReaderPreferences()
+                                dialog.dismiss()
+                            })
+                            SingleChoiceOptionRow(label = blackLabel, selected = (selectionBgMode == 2), onClick = {
+                                readerConfig.updateReadingBackgroundMode(2f)
+                                applyReaderPreferences()
+                                dialog.dismiss()
+                            })
+                        }
+                    }
+                }
+            }
+
+            // Show as bottom-sheet dialog
+            dialog.setContentView(content)
+            dialog.setOnDismissListener {
+                // no-op for now
+            }
+            dialog.show()
+            // Ensure bottom sheet uses full width and match reader theme
+            try {
+                val bottomSheet = dialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
+                if (bottomSheet != null) {
+                    val lp = bottomSheet.layoutParams
+                    lp?.width = ViewGroup.LayoutParams.MATCH_PARENT
+                    bottomSheet.layoutParams = lp
+                    bottomSheet.requestLayout()
+
+                    // Use the global app background color for the bottom sheet so the settings panel matches the app
+                    bottomSheet.setBackgroundColor(appColorsFor(libraryConfig.backgroundMode).bg.toArgb())
+                }
+            } catch (_: Exception) { }
+        } catch (t: Throwable) {
+            Log.w(_tag, "showReaderSettingsPopup failed: ${t.message}")
+        }
+    }
+
     private fun applyReaderPreferences() {
         val fragment = supportFragmentManager.findFragmentByTag("EpubNavigator")
         val navigator = fragment as? EpubNavigatorFragment
         val testNavigator = fragment as? TestNavigatorFragment
 
+        // 🔴 LOW-MEMORY OPTIMIZATION: applicare anche al runtime
+        val isLowMemoryDevice = isLowMemoryDevice()
+        val shouldDisablePublisherStyles = isLowMemoryDevice
+
+        val effectiveBgModeInt = if (readerConfig.readingBackgroundMode >= 0f) readerConfig.readingBackgroundMode.toInt() else libraryConfig.backgroundMode.toInt()
+
         val newPreferences = EpubPreferences(
             fontSize = libraryConfig.fontSizeScale.toDouble(),
-            fontWeight = if (libraryConfig.forceBold) 2.0 else null,
+            // 🔴 OPTIMIZATION: Disable bold on low-memory (reduces rendering overhead)
+            fontWeight = if (libraryConfig.forceBold && !isLowMemoryDevice) 2.0 else null,
             columnCount = ColumnCount.ONE,
-            publisherStyles = true,
-            theme = when (libraryConfig.backgroundMode.toInt()) {
+            // 🔴 OPTIMIZATION: Non applicare publisher styles su low-memory
+            publisherStyles = !shouldDisablePublisherStyles,
+            theme = when (effectiveBgModeInt) {
                 1 -> Theme.SEPIA
                 2 -> Theme.DARK
                 else -> Theme.LIGHT
             }
         )
 
-        Log.d(_tag, "Applicazione nuove preferenze: Font=${newPreferences.fontSize}, Bold=${libraryConfig.forceBold}, PublisherStyles=${newPreferences.publisherStyles}")
+        Log.d(_tag, "applyReaderPreferences: Font=${newPreferences.fontSize}, Bold=${libraryConfig.forceBold}, PublisherStyles=${newPreferences.publisherStyles}, LowMemory=$isLowMemoryDevice")
         navigator?.submitPreferences(newPreferences)
         testNavigator?.submitPreferences(newPreferences)
+        // 🎨 Re-inject CSS after applying preferences so theme/font changes take effect
+        try {
+            injectThemeAwareCss()
+        } catch (t: Throwable) {
+            Log.w(_tag, "injectThemeAwareCss reinjection failed: ${t.message}")
+        }
         // Apply the selected font to the reader UI elements (header/footer/menu)
         applyTypefaceToReaderUI()
+    }
+
+    /**
+     * Inject theme-aware CSS into the Readium navigator if possible.
+     * This attempts to evaluate JavaScript in the navigator fragment; if not
+     * available, it logs a warning and returns.
+     */
+    private fun injectThemeAwareCss() {
+        val fragment = supportFragmentManager.findFragmentByTag("EpubNavigator") as? EpubNavigatorFragment ?: return
+
+        // Generate base CSS using reader-specific theme if present
+        val effectiveBg = if (readerConfig.readingBackgroundMode >= 0f) readerConfig.readingBackgroundMode.toInt() else libraryConfig.backgroundMode.toInt()
+        // Generate base CSS
+        var css = ThemeAwareCssInjector.generateLeanCss(
+            backgroundMode = effectiveBg,
+            fontChoice = libraryConfig.fontChoice.toInt()
+        )
+
+        // If user selected Literata and device has sufficient memory, attempt to embed or reference the font.
+        try {
+            val wantLiterata = libraryConfig.fontChoice.toInt() == 1
+            val lowMem = isLowMemoryDevice()
+            if (wantLiterata && !lowMem) {
+                // 1) Prefer an asset copy if the developer placed the TTF in assets/fonts/
+                try {
+                    assets.open("fonts/literata_regular.ttf").use { _ ->
+                        // Asset exists: reference via android_asset URL
+                        val fontFace = "@font-face { font-family: 'LiterataCustom'; src: url('file:///android_asset/fonts/literata_regular.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }"
+                        val override = "body { font-family: 'LiterataCustom', ${ThemeAwareCssInjector.getThemeColors(effectiveBg, libraryConfig.fontChoice.toInt()).fontFamily} !important; }"
+                        css = fontFace + "\n" + override + "\n" + css
+                        Log.d(_tag, "injectThemeAwareCss: using literata from assets/fonts/literata_regular.ttf")
+                        // Asset used, skip further checks
+                        throw AssetUsedException()
+                    }
+                } catch (ae: AssetUsedException) {
+                    // intentional control flow to skip further checks
+                } catch (e: Exception) {
+                    // asset not found, continue to try resources
+                }
+
+                // 2) Try resource in res/font (if packaged as a font resource)
+                val resId = resources.getIdentifier("literata_regular", "font", packageName)
+                if (resId != 0) {
+                    try {
+                        val inp = resources.openRawResource(resId)
+                        val bytes = inp.readBytes()
+                        inp.close()
+                        val maxEmbedBytes = 800 * 1024 // 800 KB cap for embedded font
+                        if (bytes.size <= maxEmbedBytes) {
+                            val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                            val fontFace = "@font-face { font-family: 'LiterataCustom'; src: url('data:font/ttf;base64,$b64') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }"
+                            val override = "body { font-family: 'LiterataCustom', ${ThemeAwareCssInjector.getThemeColors(effectiveBg, libraryConfig.fontChoice.toInt()).fontFamily} !important; }"
+                            css = fontFace + "\n" + override + "\n" + css
+                            Log.d(_tag, "injectThemeAwareCss: embedded Literata font (${bytes.size} bytes) from res/font")
+                        } else {
+                            // 3) If too large, write to internal files dir and reference via file://
+                            try {
+                                val outDir = File(filesDir, "fonts")
+                                if (!outDir.exists()) outDir.mkdirs()
+                                val outFile = File(outDir, "literata_regular.ttf")
+                                if (!outFile.exists() || outFile.length() != bytes.size.toLong()) {
+                                    outFile.writeBytes(bytes)
+                                }
+                                val fontFace = "@font-face { font-family: 'LiterataCustom'; src: url('file://${outFile.absolutePath}') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }"
+                                val override = "body { font-family: 'LiterataCustom', ${ThemeAwareCssInjector.getThemeColors(effectiveBg, libraryConfig.fontChoice.toInt()).fontFamily} !important; }"
+                                css = fontFace + "\n" + override + "\n" + css
+                                Log.d(_tag, "injectThemeAwareCss: wrote Literata to files dir and referencing ${outFile.absolutePath}")
+                            } catch (wf: Exception) {
+                                Log.w(_tag, "injectThemeAwareCss: failed to write literata to files dir: ${wf.message}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(_tag, "injectThemeAwareCss: failed reading font resource for embed: ${e.message}")
+                    }
+                } else {
+                    Log.d(_tag, "injectThemeAwareCss: literata resource not found (resId=0) and no asset available")
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore AssetUsedException control-flow or other unexpected errors
+            if (e is AssetUsedException) {
+                // no-op
+            } else {
+                Log.w(_tag, "injectThemeAwareCss: embed/reference check failed: ${e.message}")
+            }
+        }
+        // Safely quote the CSS for embedding in JS
+        val quotedCss = try {
+            JSONObject.quote(css)
+        } catch (e: Exception) {
+            // Fallback - simple escaping
+            "\"" + css.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
+        }
+
+        val jsCode = """
+            (function() {
+                try {
+                    var styleEl = document.getElementById('nosferatu-theme-injected');
+                    if (!styleEl) {
+                        styleEl = document.createElement('style');
+                        styleEl.id = 'nosferatu-theme-injected';
+                        document.head.appendChild(styleEl);
+                    }
+                    styleEl.textContent = $quotedCss;
+                    console.log('Nosferatu theme CSS injected');
+                } catch (e) {
+                    console.warn('Nosferatu CSS injection failed', e);
+                }
+            })();
+        """.trimIndent()
+
+        try {
+            // Try common method names via reflection to maximize compatibility
+            val cls = fragment::class.java
+            // Try evaluateJavaScript(String)
+            val evalOne = cls.methods.firstOrNull { it.name.equals("evaluateJavaScript", ignoreCase = true) && it.parameterCount == 1 }
+            if (evalOne != null) {
+                evalOne.invoke(fragment, jsCode)
+                Log.d(_tag, "injectThemeAwareCss: invoked evaluateJavaScript(String) on fragment")
+                return
+            }
+
+            // Try evaluateJavascript(String, ValueCallback)
+            val evalTwo = cls.methods.firstOrNull { it.name.equals("evaluateJavascript", ignoreCase = true) && it.parameterCount >= 1 }
+            if (evalTwo != null) {
+                // If method expects two args, pass null for callback
+                if (evalTwo.parameterCount == 1) {
+                    evalTwo.invoke(fragment, jsCode)
+                } else {
+                    evalTwo.invoke(fragment, jsCode, null)
+                }
+                Log.d(_tag, "injectThemeAwareCss: invoked evaluateJavascript on fragment")
+                return
+            }
+
+            // Fallback: attempt to evaluate via fragment's view webviews
+            val view = fragment.view
+            if (view != null) {
+                // Search for a WebView instance inside the fragment's view hierarchy
+                val webView = findWebViewInView(view)
+                if (webView != null) {
+                    try {
+                        webView.evaluateJavascript(jsCode, null)
+                        Log.d(_tag, "injectThemeAwareCss: injected via WebView.evaluateJavascript")
+                        return
+                    } catch (e: Exception) {
+                        Log.w(_tag, "injectThemeAwareCss: WebView.evaluateJavascript failed: ${e.message}")
+                    }
+                }
+            }
+
+            Log.w(_tag, "injectThemeAwareCss: no compatible evaluate method found on navigator fragment")
+        } catch (e: Exception) {
+            Log.w(_tag, "injectThemeAwareCss failed: ${e.message}", e)
+        }
+    }
+
+    // Recursively search for a WebView in the view hierarchy
+    private fun findWebViewInView(root: View): android.webkit.WebView? {
+        if (root is android.webkit.WebView) return root
+        if (root !is ViewGroup) return null
+        for (i in 0 until root.childCount) {
+            val child = root.getChildAt(i)
+            val found = findWebViewInView(child)
+            if (found != null) return found
+        }
+        return null
     }
 
     private fun isCurrentLocatorBookmarked(): Boolean {
@@ -617,8 +948,9 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         private val VIEW_TYPE_HEADER = 0
         private val VIEW_TYPE_ITEM = 1
 
-        // Precompute theme colors and runtime typeface
-        private val appColors = appColorsFor(libraryConfig.backgroundMode)
+        // Precompute theme colors and runtime typeface (respect reader-only theme if set)
+        private val effectiveBgForToc = if (readerConfig.readingBackgroundMode >= 0f) readerConfig.readingBackgroundMode.toInt() else libraryConfig.backgroundMode.toInt()
+        private val appColors = appColorsFor(effectiveBgForToc.toFloat())
         private val selectedBgColor = appColors.selectedRowBackground.toArgb()
         private val textColorInt = appColors.onBg.toArgb()
         private val iconColorInt = appColors.onBg.toArgb()
@@ -864,7 +1196,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                     try {
                         // Apply reader theme background to the bottom sheet so it matches the reader theme
                         try {
-                            val sheetColor = appColorsFor(libraryConfig.backgroundMode).bg.toArgb()
+                            val effectiveSheetBg = if (readerConfig.readingBackgroundMode >= 0f) readerConfig.readingBackgroundMode.toInt() else libraryConfig.backgroundMode.toInt()
+                            val sheetColor = appColorsFor(effectiveSheetBg.toFloat()).bg.toArgb()
                             bottomSheet.setBackgroundColor(sheetColor)
                         } catch (_: Exception) { }
                         val behavior = BottomSheetBehavior.from(bottomSheet)
@@ -958,6 +1291,18 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     private suspend fun openPublication(file: File): Publication = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
         Log.d(_tag, "openPublication: START - ${file.name}")
+        
+        // 🔴 AGGRESSIVE: Force garbage collection before EPUB rendering
+        // On 1GB device, this helps free up memory for Chromium tile allocation
+        System.gc()
+        Thread.sleep(50)  // Brief pause to let GC complete
+        
+        // 🔴 LOG MEMORY STATUS AT EPUB OPEN TIME
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val memInfo = ActivityManager.MemoryInfo()
+        activityManager?.getMemoryInfo(memInfo)
+        val availableMB = memInfo.availMem / (1024 * 1024)
+        Log.d(_tag, "📊 EPUB OPEN: Available memory = ${availableMB}MB after GC")
 
         // Phase 1: Check if extracted cache is available (Phase 1 timing)
         val cacheStartTime = System.currentTimeMillis()

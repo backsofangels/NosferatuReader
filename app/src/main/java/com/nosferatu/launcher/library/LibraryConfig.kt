@@ -33,7 +33,9 @@ class LibraryConfig(private val context: Context) {
                 // Fallback to user home on non-Android environments (tests)
                 System.getProperty("user.home") ?: "/"
             }
-        private const val DEFAULT_FONT_SIZE = 1.1f
+        // 🔴 OPTIMIZATION: Reduced from 1.1f to 0.85f for low-memory devices
+        // Smaller font = smaller rendering viewport = fewer tiles = less memory
+        private const val DEFAULT_FONT_SIZE = 0.85f
         private const val DEFAULT_BACKGROUND_MODE = 0.0f // 0 = bianco, 1 = panna, 2 = nero
     }
 
