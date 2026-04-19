@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="?attr/readerBackgroundColor">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/spacing_16"
+        android:paddingEnd="@dimen/spacing_16"
+        android:paddingTop="@dimen/spacing_sm"
+        android:paddingBottom="@dimen/spacing_sm"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
+
+        <!-- Clock (ora) -->
+        <TextView
+            android:id="@+id/reader_status_clock"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="12sp"
+            android:textColor="?attr/readerTextColor"
+            android:textStyle="bold"
+            android:gravity="start"
+            android:text="00:00" />
+
+        <!-- Battery info (batteria) -->
+        <LinearLayout
+            android:id="@+id/reader_status_battery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/reader_battery_percentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/readerTextColor"
+                android:textStyle="bold"
+                android:layout_marginEnd="4dp"
+                android:text="--%" />
+
+            <FrameLayout
+                android:layout_width="18dp"
+                android:layout_height="10dp"
+                android:background="@drawable/battery_box"
+                android:paddingStart="1dp"
+                android:paddingEnd="1dp"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp">
+
+                <View
+                    android:id="@+id/reader_battery_fill"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/readerTextColor" />
+            </FrameLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Thin divider line -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/readerTextColor"
+        android:alpha="0.2" />
+
+</LinearLayout>

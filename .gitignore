@@ -6,7 +6,7 @@ build/
 
 # Local configuration file (sdk path, etc)
 local.properties
-build-run.ps1
+*.ps1
 .actrc
 .secrets
 .env

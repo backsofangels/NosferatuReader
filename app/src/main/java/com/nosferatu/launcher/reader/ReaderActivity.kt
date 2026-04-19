@@ -8,11 +8,20 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import kotlin.concurrent.timer
+import java.util.Timer
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -74,7 +83,6 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.graphics.Color as AndroidColor
 import android.app.ActivityManager
-import android.content.Context
 import android.util.Base64
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -118,6 +126,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
     private var isSeeking = false
     private val libraryConfig by lazy { LibraryConfig(this) }
     private val readerConfig by lazy { ReaderConfig(this) }
+    private var statusBarClockTimer: Timer? = null
+    private var statusBarBatteryReceiver: BroadcastReceiver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,6 +138,8 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             2 -> setTheme(R.style.Theme_NosferatuReader_Dark)
             else -> setTheme(R.style.Theme_NosferatuReader)
         }
+        // Hide system status bar (match MainActivity behavior)
+        hideSystemUI()
         setContentView(R.layout.activity_reader)
 
         // Setup UI Insets
@@ -164,6 +176,14 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         setupSettingsPanel()
         // Apply initial typeface according to stored preference
         applyTypefaceToReaderUI()
+        // Setup custom XML-based status bar (clock + battery)
+        setupCustomStatusBar()
+        // Ensure the custom reader status bar is always visible
+        try {
+            findViewById<View>(R.id.reader_status_bar_container)?.visibility = View.VISIBLE
+        } catch (t: Throwable) {
+            Log.w(_tag, "set status bar visible failed: ${t.message}")
+        }
 
         // bookmarks panel trigger (bottom bar)
         findViewById<View>(R.id.btn_bookmarks).setOnClickListener {
@@ -317,6 +337,10 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         }
     }
 
+    // Expose configs to fragments so they can update the shared instances
+    fun provideLibraryConfig(): LibraryConfig = libraryConfig
+    fun provideReaderConfig(): ReaderConfig = readerConfig
+
     /**
      * 🔴 OPTIMIZATION: Rilevare se il device è low-memory (< 1.5 GB RAM)
      * Su device Tegra 3 con 1GB RAM, Readium non riesce a gestire i tile del rendering
@@ -406,91 +430,14 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     private fun showReaderSettingsPopup(anchor: View) {
         try {
-            val content = layoutInflater.inflate(R.layout.reader_settings_popup, null)
-            val compose = content.findViewById<ComposeView>(R.id.reader_settings_compose)
-
-            val dialog = BottomSheetDialog(this)
-
-            // Use a composition strategy that disposes when the view is detached to avoid leaks
-            try { compose.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow) } catch (_: Exception) { }
-
-            compose.setContent {
-                // Use global app theme colors for the settings panel UI
-                val selectionBgMode = if (readerConfig.readingBackgroundMode >= 0f) readerConfig.readingBackgroundMode.toInt() else libraryConfig.backgroundMode.toInt()
-                val appColors = appColorsFor(libraryConfig.backgroundMode)
-                val isDark = libraryConfig.backgroundMode.toInt() == 2
-                val colorScheme = if (isDark) {
-                    darkColorScheme().copy(
-                        background = appColors.bg,
-                        surface = appColors.surface,
-                        onBackground = appColors.onBg,
-                        onSurface = appColors.onBg
-                    )
-                } else {
-                    lightColorScheme(
-                        background = appColors.bg,
-                        surface = appColors.surface,
-                        onBackground = appColors.onBg,
-                        onSurface = appColors.onBg
-                    )
-                }
-
-                MaterialTheme(colorScheme = colorScheme) {
-                    CompositionLocalProvider(LocalAppColors provides appColors) {
-                        Column {
-                            ReaderTextSettings(
-                                libraryConfig = libraryConfig,
-                                onPreferenceChanged = { applyReaderPreferences() }
-                            )
-                            val whiteLabel = stringResource(id = R.string.color_white)
-                            val creamLabel = stringResource(id = R.string.color_cream)
-                            val blackLabel = stringResource(id = R.string.color_black)
-
-                            SingleChoiceOptionRow(label = whiteLabel, selected = (selectionBgMode == 0), onClick = {
-                                readerConfig.updateReadingBackgroundMode(0f)
-                                applyReaderPreferences()
-                                dialog.dismiss()
-                            })
-                            SingleChoiceOptionRow(label = creamLabel, selected = (selectionBgMode == 1), onClick = {
-                                readerConfig.updateReadingBackgroundMode(1f)
-                                applyReaderPreferences()
-                                dialog.dismiss()
-                            })
-                            SingleChoiceOptionRow(label = blackLabel, selected = (selectionBgMode == 2), onClick = {
-                                readerConfig.updateReadingBackgroundMode(2f)
-                                applyReaderPreferences()
-                                dialog.dismiss()
-                            })
-                        }
-                    }
-                }
-            }
-
-            // Show as bottom-sheet dialog
-            dialog.setContentView(content)
-            dialog.setOnDismissListener {
-                // no-op for now
-            }
-            dialog.show()
-            // Ensure bottom sheet uses full width and match reader theme
-            try {
-                val bottomSheet = dialog.findViewById<android.view.View>(com.google.android.material.R.id.design_bottom_sheet)
-                if (bottomSheet != null) {
-                    val lp = bottomSheet.layoutParams
-                    lp?.width = ViewGroup.LayoutParams.MATCH_PARENT
-                    bottomSheet.layoutParams = lp
-                    bottomSheet.requestLayout()
-
-                    // Use the global app background color for the bottom sheet so the settings panel matches the app
-                    bottomSheet.setBackgroundColor(appColorsFor(libraryConfig.backgroundMode).bg.toArgb())
-                }
-            } catch (_: Exception) { }
+            val fragment = ReaderSettingsBottomSheet()
+            fragment.show(supportFragmentManager, "ReaderSettings")
         } catch (t: Throwable) {
             Log.w(_tag, "showReaderSettingsPopup failed: ${t.message}")
         }
     }
 
-    private fun applyReaderPreferences() {
+    fun applyReaderPreferences() {
         val fragment = supportFragmentManager.findFragmentByTag("EpubNavigator")
         val navigator = fragment as? EpubNavigatorFragment
         val testNavigator = fragment as? TestNavigatorFragment
@@ -1297,7 +1244,17 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
             immersiveFooter.visibility = View.VISIBLE
             isFontBarVisible = false
             fontContainer.visibility = View.GONE
-            // font toggle removed from UI; nothing to reset
+        }
+    }
+
+    private fun hideSystemUI() {
+        try {
+            val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+            windowInsetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
+        } catch (t: Throwable) {
+            Log.w(_tag, "hideSystemUI failed: ${t.message}")
         }
     }
 
@@ -1362,6 +1319,15 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
 
     override fun onDestroy() {
         publication?.close()
+        // Cleanup status bar timer and receiver
+        statusBarClockTimer?.cancel()
+        statusBarBatteryReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (e: Exception) {
+                Log.w(_tag, "Error unregistering battery receiver: ${e.message}")
+            }
+        }
         super.onDestroy()
     }
 
@@ -1404,6 +1370,93 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val targetIndex = if (forward) safeIndex + 1 else safeIndex - 1
         val target = allPositions.getOrNull(targetIndex.coerceIn(0, allPositions.lastIndex)) ?: return
         navigator.go(target, animated = false)
+    }
+
+    private fun setupCustomStatusBar() {
+        try {
+            val container = findViewById<android.widget.FrameLayout>(R.id.reader_status_bar_container) ?: return
+            val statusBarView = layoutInflater.inflate(R.layout.reader_status_bar, container, false)
+            container.addView(statusBarView)
+
+            val clockTextView = statusBarView.findViewById<TextView>(R.id.reader_status_clock)
+            val batteryPercentageView = statusBarView.findViewById<TextView>(R.id.reader_battery_percentage)
+            val batteryFillView = statusBarView.findViewById<View>(R.id.reader_battery_fill)
+
+            // Setup clock update timer (every second) - update UI on main thread
+            statusBarClockTimer = kotlin.concurrent.timer(initialDelay = 0, period = 1000) {
+                try {
+                    val now = System.currentTimeMillis()
+                    val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(now))
+                    this@ReaderActivity.runOnUiThread {
+                        try { clockTextView.text = timeStr } catch (_: Exception) {}
+                    }
+                } catch (e: Exception) {
+                    Log.w(_tag, "Clock update failed: ${e.message}")
+                }
+            }
+
+            // Setup battery update receiver
+            val intentFilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+
+            // Populate initial battery state from sticky intent
+            try {
+                val sticky = registerReceiver(null, intentFilter)
+                if (sticky != null) {
+                    try {
+                        val level = sticky.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)
+                        val scale = sticky.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1)
+                        val percentage = if (level >= 0 && scale > 0) (level * 100) / scale else 0
+                        runOnUiThread {
+                            try {
+                                batteryPercentageView.text = "$percentage%"
+                                val totalPx = 18.dpToPx()
+                                val fillWidth = (totalPx * percentage) / 100
+                                val p = batteryFillView.layoutParams
+                                p.width = fillWidth
+                                batteryFillView.layoutParams = p
+                            } catch (_: Exception) {}
+                        }
+                    } catch (e: Exception) {
+                        Log.w(_tag, "Initial battery read failed: ${e.message}")
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.w(_tag, "Initial battery sticky intent failed: ${t.message}")
+            }
+
+            statusBarBatteryReceiver = object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                    try {
+                        val level = intent?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                        val scale = intent?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+                        val percentage = if (level >= 0 && scale > 0) (level * 100) / scale else 0
+                        runOnUiThread {
+                            try {
+                                batteryPercentageView.text = "$percentage%"
+                                val totalPx = 18.dpToPx()
+                                val fillWidth = (totalPx * percentage) / 100
+                                val p = batteryFillView.layoutParams
+                                p.width = fillWidth
+                                batteryFillView.layoutParams = p
+                            } catch (e: Exception) {
+                                Log.w(_tag, "Battery UI update failed: ${e.message}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(_tag, "Battery update failed: ${e.message}")
+                    }
+                }
+            }
+
+            // Register battery receiver (no permission param)
+            try {
+                registerReceiver(statusBarBatteryReceiver, intentFilter)
+            } catch (t: Throwable) {
+                Log.w(_tag, "registerReceiver failed: ${t.message}")
+            }
+        } catch (t: Throwable) {
+            Log.w(_tag, "setupCustomStatusBar failed: ${t.message}")
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
