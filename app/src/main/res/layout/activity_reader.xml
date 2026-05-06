@@ -17,6 +17,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!--
     <TextView
         android:id="@+id/immersive_header_title"
         android:layout_width="0dp"
@@ -36,6 +37,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+     -->
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/immersive_footer"
@@ -126,8 +129,8 @@
             android:layout_width="@dimen/reader_icon_size"
             android:layout_height="@dimen/reader_icon_size"
             android:padding="@dimen/reader_icon_padding"
-            android:src="@drawable/ic_more"
-            android:contentDescription="@string.cd_reader_settings"
+            android:src="@drawable/ic_settings_icon"
+            android:contentDescription="@string/cd_reader_settings"
             app:tint="?attr/readerTextColor"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"

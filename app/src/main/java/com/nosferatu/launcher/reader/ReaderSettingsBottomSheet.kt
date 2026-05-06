@@ -9,7 +9,9 @@ import android.content.DialogInterface
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -67,7 +69,11 @@ class ReaderSettingsBottomSheet : BottomSheetDialogFragment() {
 
             MaterialTheme(colorScheme = colorScheme, typography = baseTypography) {
                 CompositionLocalProvider(LocalAppColors provides appColors) {
-                    Column {
+                    Column(
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxWidth()
+                            .background(appColors.bg)
+                    ) {
                         ReaderTextSettings(
                             libraryConfig = libraryConfig,
                             onPreferenceChanged = { (activity as? ReaderActivity)?.applyReaderPreferences() }

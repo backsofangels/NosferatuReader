@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="8dp"
-    android:background="?attr/readerBackgroundColor">
+    android:background="@android:color/transparent">
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/reader_settings_compose"

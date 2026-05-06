@@ -55,26 +55,6 @@ fun TopActionBar(
             .fillMaxWidth()
             .background(colors.bg)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(dimensionResource(id = R.dimen.touch_target_min))
-                .padding(horizontal = dimensionResource(id = R.dimen.spacing_16)),
-            contentAlignment = Alignment.CenterEnd,
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_sync_icon),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(dimensionResource(id = R.dimen.icon_small))
-                    .rotate(if (isScanning) rotation else 0f)
-                    .clickable(
-                        enabled = !isScanning,
-                        onClick = onSyncClick
-                    ),
-                tint = if (isScanning) colors.onBgMuted else colors.onBg
-            )
-        }
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = dimensionResource(id = R.dimen.divider_thin),

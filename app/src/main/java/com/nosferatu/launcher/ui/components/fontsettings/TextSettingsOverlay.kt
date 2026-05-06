@@ -91,7 +91,8 @@ fun SliderRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(36.dp), // Altezza identica a ControlTextButton
+                    .height(36.dp)
+                    .background(LocalAppColors.current.bg), // evita che colori Material3 interni traspariscano
                 contentAlignment = Alignment.Center
             ) {
                 Slider(

@@ -16,6 +16,7 @@
     <dimen name="reader_menu_seek_margin_top">16dp</dimen>
     <dimen name="reader_menu_seek_margin_horizontal">16dp</dimen>
     <dimen name="reader_menu_title_margin_horizontal">8dp</dimen>
+
     <!-- Common tokens -->
     <dimen name="touch_target_min">48dp</dimen>
     <dimen name="icon_small">24dp</dimen>
@@ -24,4 +25,7 @@
     <dimen name="divider_1">1dp</dimen>
     <dimen name="cover_width">55dp</dimen>
     <dimen name="row_min_height">56dp</dimen>
+
+    <!-- Settings -->
+    <dimen name="settings_icon_size">20dp</dimen>
 </resources>

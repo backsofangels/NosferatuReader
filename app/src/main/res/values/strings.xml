@@ -16,6 +16,7 @@
     <string name="in_reading">In Lettura</string>
     <string name="font_size_title">Dimensione Testo</string>
     <string name="back_arrow">←</string>
+    <string name="settings_title">Impostazioni</string>
     <!-- Settings titles -->
     <string name="setting_font_choice">Carattere Predefinito</string>
     <string name="setting_font_size">Dimensioni Testo</string>
@@ -38,8 +39,8 @@
     <string name="tab_books">Libri</string>
     <string name="tab_authors">Autori</string>
     <string name="tab_home">Home</string>
-    <string name="tab_my_books">Miei Libri</string>
-    <string name="tab_more">Altro</string>
+    <string name="tab_library">Libreria</string>
+    <string name="tab_settings">Impostazioni</string>
     <!-- Font size options -->
     <string name="font_size_small">Piccola</string>
     <string name="font_size_medium">Media</string>

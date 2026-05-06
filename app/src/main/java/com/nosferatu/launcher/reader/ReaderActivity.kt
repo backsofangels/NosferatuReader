@@ -762,13 +762,13 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
                 ResourcesCompat.getFont(this, resId)
             } else Typeface.DEFAULT
 
-            val header = findViewById<TextView>(R.id.immersive_header_title)
+            //val header = findViewById<TextView>(R.id.immersive_header_title)
             val footer = findViewById<TextView>(R.id.immersive_footer_text)
             val page = findViewById<TextView>(R.id.menu_page_text)
             val title = findViewById<TextView>(R.id.menu_book_title)
             val author = findViewById<TextView>(R.id.menu_book_author)
 
-            header.typeface = tf
+            //header.typeface = tf
             footer.typeface = tf
             page.typeface = tf
             title.typeface = tf
@@ -1175,7 +1175,7 @@ class ReaderActivity : AppCompatActivity(), EpubNavigatorFragment.Listener {
         val bookTitle = publication?.metadata?.title?.uppercase() ?: (TestReaderInjector.fakeTitle?.uppercase() ?: "")
         val bookAuthor = publication?.metadata?.authors?.firstOrNull()?.name ?: TestReaderInjector.fakeAuthor
 
-        findViewById<TextView>(R.id.immersive_header_title).text = chapterTitle.uppercase()
+        //findViewById<TextView>(R.id.immersive_header_title).text = chapterTitle.uppercase()
         findViewById<TextView>(R.id.immersive_footer_text).text = getString(com.nosferatu.launcher.R.string.reader_footer_format, bookTitle, percent)
         findViewById<ProgressBar>(R.id.immersive_progress_bar).progress = percent
 
