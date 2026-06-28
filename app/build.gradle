@@ -60,6 +60,8 @@ android {
 }
 
 dependencies {
+    api project(':lib')
+
     implementation(platform(libs.androidx.compose.bom))
 
     implementation libs.androidx.runtime

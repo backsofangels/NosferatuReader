@@ -16,8 +16,10 @@ dependencyResolutionManagement {
         maven {
             url = uri("https://jitpack.io")
         }
+        maven { url 'https://maven.ghostscript.com' }
     }
 }
 
 rootProject.name = "nosferatu-launcher"
 include ':app'
+include ':lib'

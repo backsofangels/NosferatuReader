@@ -41,7 +41,8 @@ import com.nosferatu.launcher.NosferatuApp
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryViewModel
 import com.nosferatu.launcher.library.LibraryViewModelFactory
-import com.nosferatu.launcher.reader.ReaderActivity
+import com.artifex.mupdf.mini.DocumentActivity
+import java.io.File
 import com.nosferatu.launcher.ui.components.books.BooksFilterBar
 import com.nosferatu.launcher.ui.components.books.BooksScreenLibraryList
 import com.nosferatu.launcher.ui.components.common.BottomBar
@@ -231,10 +232,15 @@ class MainActivity: AppCompatActivity() {
     }
 
     private fun openBook(book: EbookEntity) {
-        val intent = Intent(this, ReaderActivity::class.java).apply {
-            putExtra("BOOK_PATH", book.filePath)
-            putExtra("LAST_LOCATION_JSON", book.lastLocationJson)
-            putExtra("BOOK_ID", book.id)
+        // MuPDF DocumentActivity expects the document URI as intent data and an
+        // optional ReturnToLibraryActivity extra. Construct a file:// URI for the
+        // book path and pass the package-scoped ReturnToLibraryActivity flag so
+        // the DocumentActivity can return to the library when finished.
+        val fileUri = File(book.filePath).toUri()
+        val intent = Intent(this, DocumentActivity::class.java).apply {
+            data = fileUri
+            // Use the package-scoped key that DocumentActivity reads
+            putExtra("${packageName}.ReturnToLibraryActivity", 1)
             addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
         }
         startActivity(intent)
