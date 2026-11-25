@@ -29,7 +29,6 @@ import android.text.method.PasswordTransformationMethod;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -37,13 +36,27 @@ import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.PopupMenu;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
+import android.content.IntentFilter;
+import android.os.BatteryManager;
+import android.view.LayoutInflater;
+import android.widget.FrameLayout;
+import android.view.ViewGroup;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -95,14 +108,27 @@ public class DocumentActivity extends Activity
 	protected View searchBackwardButton;
 	protected View searchForwardButton;
 	protected View zoomButton;
-	protected View layoutButton;
-	protected PopupMenu layoutPopupMenu;
-	protected View outlineButton;
+	protected View backButton;
+	protected View readerSettingsButton;
+	protected View bookmarkToggleButton;
+	protected View tocButton;
+	protected View bookmarksButton;
 	protected View bottomBar;
+	protected View immersiveFooter;
 	protected View backgroundLayout;
 	protected View topBar;
 	protected TextView pageLabel;
+	protected TextView menuBookTitle;
+	protected TextView menuBookAuthor;
+	protected TextView immersiveFooterText;
+	protected ProgressBar immersiveProgressBar;
 	protected SeekBar pageSeekbar;
+	protected ReaderUiController uiController;
+
+	// Helper: convert dp to pixels
+	protected int dpToPx(int dp) {
+		return (int)(dp * getResources().getDisplayMetrics().density + 0.5f);
+	}
 
 	protected boolean pageCountChanged;
 	protected int pageCount;
@@ -115,6 +141,14 @@ public class DocumentActivity extends Activity
 	protected boolean toggledUI;
 	protected Insets systemInsets = Insets.NONE;
 	protected boolean newSearchHitPage;
+	private int bottomBarPaddingLeft;
+	private int bottomBarPaddingTop;
+	private int bottomBarPaddingRight;
+	private int bottomBarPaddingBottom;
+	private int immersiveFooterPaddingLeft;
+	private int immersiveFooterPaddingTop;
+	private int immersiveFooterPaddingRight;
+	private int immersiveFooterPaddingBottom;
 
 	private String toHex(byte[] digest) {
 		StringBuilder builder = new StringBuilder(2 * digest.length);
@@ -166,6 +200,7 @@ public class DocumentActivity extends Activity
 	}
 
 	public void onCreate(Bundle savedInstanceState) {
+		applyReaderTheme();
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -174,12 +209,35 @@ public class DocumentActivity extends Activity
 		getWindowManager().getDefaultDisplay().getMetrics(metrics);
 		displayDPI = metrics.densityDpi;
 
-		setContentView(R.layout.document_activity);
+		try {
+			setContentView(R.layout.document_activity);
+		} catch (RuntimeException inflateError) {
+			Log.e(APP, "Failed to inflate document_activity layout", inflateError);
+			Toast.makeText(this, getString(R.string.toast_no_document_uri), Toast.LENGTH_SHORT).show();
+			finish();
+			return;
+		}
 		actionBar = findViewById(R.id.action_bar);
 		searchBar = findViewById(R.id.search_bar);
-		bottomBar = findViewById(R.id.bottom_bar);
+		bottomBar = findViewById(R.id.menu_bottom_bar);
+		immersiveFooter = findViewById(R.id.immersive_footer);
 		backgroundLayout = findViewById(R.id.background_layout);
-		topBar = findViewById(R.id.top_bar);
+		topBar = findViewById(R.id.menu_top_bar);
+
+
+
+		if (bottomBar != null) {
+			bottomBarPaddingLeft = bottomBar.getPaddingLeft();
+			bottomBarPaddingTop = bottomBar.getPaddingTop();
+			bottomBarPaddingRight = bottomBar.getPaddingRight();
+			bottomBarPaddingBottom = bottomBar.getPaddingBottom();
+		}
+		if (immersiveFooter != null) {
+			immersiveFooterPaddingLeft = immersiveFooter.getPaddingLeft();
+			immersiveFooterPaddingTop = immersiveFooter.getPaddingTop();
+			immersiveFooterPaddingRight = immersiveFooter.getPaddingRight();
+			immersiveFooterPaddingBottom = immersiveFooter.getPaddingBottom();
+		}
 
 		currentBar = actionBar;
 
@@ -250,6 +308,14 @@ public class DocumentActivity extends Activity
 
 		titleLabel = (TextView)findViewById(R.id.title_label);
 		titleLabel.setText(title);
+		menuBookTitle = (TextView)findViewById(R.id.menu_book_title);
+		menuBookAuthor = (TextView)findViewById(R.id.menu_book_author);
+		if (menuBookTitle != null) {
+			menuBookTitle.setText(title);
+		}
+		if (menuBookAuthor != null) {
+			menuBookAuthor.setText("");
+		}
 
 		history = new Stack<Integer>();
 
@@ -264,10 +330,29 @@ public class DocumentActivity extends Activity
 		hasLoaded = false;
 
 		pageView = (PageView)findViewById(R.id.page_view);
+		if (actionBar == null || searchBar == null || bottomBar == null || topBar == null || backgroundLayout == null || pageView == null) {
+			Log.e(APP, "Missing required reader views. actionBar=" + actionBar
+					+ " searchBar=" + searchBar
+					+ " bottomBar=" + bottomBar
+					+ " topBar=" + topBar
+					+ " backgroundLayout=" + backgroundLayout
+					+ " pageView=" + pageView);
+			Toast.makeText(this, getString(R.string.toast_no_document_uri), Toast.LENGTH_SHORT).show();
+			finish();
+			return;
+		}
 		pageView.setActionListener(this);
 
-		pageLabel = (TextView)findViewById(R.id.page_label);
-		pageSeekbar = (SeekBar)findViewById(R.id.page_seekbar);
+		pageLabel = (TextView)findViewById(R.id.menu_page_text);
+		immersiveFooterText = (TextView)findViewById(R.id.immersive_footer_text);
+		immersiveProgressBar = (ProgressBar)findViewById(R.id.immersive_progress_bar);
+		pageSeekbar = (SeekBar)findViewById(R.id.menu_seek_bar);
+		if (pageSeekbar == null) {
+			Log.e(APP, "Missing menu_seek_bar view in document_activity layout");
+			Toast.makeText(this, getString(R.string.toast_no_document_uri), Toast.LENGTH_SHORT).show();
+			finish();
+			return;
+		}
 		pageSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 			public int newProgress = -1;
 			public void onProgressChanged(SeekBar seekbar, int progress, boolean fromUser) {
@@ -283,6 +368,89 @@ public class DocumentActivity extends Activity
 		});
 
 		searchButton = findViewById(R.id.search_button);
+		if (searchButton == null) {
+			Log.e(APP, "Missing search_button view in document_activity layout");
+			Toast.makeText(this, getString(R.string.toast_no_document_uri), Toast.LENGTH_SHORT).show();
+			finish();
+			return;
+		}
+		backButton = findViewById(R.id.btn_back);
+		readerSettingsButton = findViewById(R.id.btn_reader_settings);
+		bookmarkToggleButton = findViewById(R.id.btn_bookmark_toggle);
+		tocButton = findViewById(R.id.btn_toc);
+		bookmarksButton = findViewById(R.id.btn_bookmarks);
+		ImageView zoomIcon = (ImageView) findViewById(R.id.zoom_button);
+		ImageView backIcon = (ImageView) backButton;
+		ImageView settingsIcon = (ImageView) readerSettingsButton;
+		ImageView bookmarkIcon = (ImageView) bookmarkToggleButton;
+		ImageView tocIcon = (ImageView) tocButton;
+		ImageView bookmarksIcon = (ImageView) bookmarksButton;
+		ImageView searchCloseIcon = (ImageView) findViewById(R.id.search_close_button);
+		ImageView searchBackwardIcon = (ImageView) findViewById(R.id.search_backward_button);
+		ImageView searchForwardIcon = (ImageView) findViewById(R.id.search_forward_button);
+
+		uiController = new ReaderUiController(
+			backgroundLayout,
+			topBar,
+			bottomBar,
+			immersiveFooter,
+			titleLabel,
+			pageLabel,
+			immersiveFooterText,
+			immersiveProgressBar,
+			backIcon,
+			settingsIcon,
+			bookmarkIcon,
+			tocIcon,
+			bookmarksIcon,
+			(ImageView) searchButton,
+			zoomIcon,
+			searchCloseIcon,
+			searchBackwardIcon,
+			searchForwardIcon
+		);
+		uiController.applyTheme(readBackgroundMode(), readFontChoice());
+
+		if (backButton != null) {
+			backButton.setOnClickListener(new View.OnClickListener() {
+				public void onClick(View v) {
+					onBackPressed();
+				}
+			});
+		}
+
+		if (readerSettingsButton != null) {
+			readerSettingsButton.setOnClickListener(new View.OnClickListener() {
+				public void onClick(View v) {
+					onReaderSettingsRequested();
+				}
+			});
+		}
+
+		if (bookmarkToggleButton != null) {
+			bookmarkToggleButton.setOnClickListener(new View.OnClickListener() {
+				public void onClick(View v) {
+					onBookmarkToggleRequested();
+				}
+			});
+		}
+
+		if (tocButton != null) {
+			tocButton.setOnClickListener(new View.OnClickListener() {
+				public void onClick(View v) {
+					openOutlinePanel();
+				}
+			});
+		}
+
+		if (bookmarksButton != null) {
+			bookmarksButton.setOnClickListener(new View.OnClickListener() {
+				public void onClick(View v) {
+					onBookmarksRequested();
+				}
+			});
+		}
+
 		searchButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				showSearch();
@@ -328,18 +496,6 @@ public class DocumentActivity extends Activity
 			}
 		});
 
-		outlineButton = findViewById(R.id.outline_button);
-		outlineButton.setOnClickListener(new View.OnClickListener() {
-			public void onClick(View v) {
-				Intent intent = new Intent(DocumentActivity.this, OutlineActivity.class);
-				Bundle bundle = new Bundle();
-				bundle.putInt("POSITION", currentPage);
-				bundle.putSerializable("OUTLINE", flatOutline);
-				intent.putExtras(bundle);
-				startActivityForResult(intent, NAVIGATE_REQUEST);
-			}
-		});
-
 		zoomButton = findViewById(R.id.zoom_button);
 		zoomButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
@@ -348,40 +504,11 @@ public class DocumentActivity extends Activity
 			}
 		});
 
-		layoutButton = findViewById(R.id.layout_button);
-		layoutPopupMenu = new PopupMenu(this, layoutButton);
-		layoutPopupMenu.getMenuInflater().inflate(R.menu.layout_menu, layoutPopupMenu.getMenu());
-		layoutPopupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-			public boolean onMenuItemClick(MenuItem item) {
-				float oldLayoutEm = layoutEm;
-				int id = item.getItemId();
-				if (id == R.id.action_layout_6pt) layoutEm = 6;
-				else if (id == R.id.action_layout_7pt) layoutEm = 7;
-				else if (id == R.id.action_layout_8pt) layoutEm = 8;
-				else if (id == R.id.action_layout_9pt) layoutEm = 9;
-				else if (id == R.id.action_layout_10pt) layoutEm = 10;
-				else if (id == R.id.action_layout_11pt) layoutEm = 11;
-				else if (id == R.id.action_layout_12pt) layoutEm = 12;
-				else if (id == R.id.action_layout_13pt) layoutEm = 13;
-				else if (id == R.id.action_layout_14pt) layoutEm = 14;
-				else if (id == R.id.action_layout_15pt) layoutEm = 15;
-				else if (id == R.id.action_layout_16pt) layoutEm = 16;
-				if (oldLayoutEm != layoutEm)
-					relayoutDocument();
-				return true;
-			}
-		});
-		layoutButton.setOnClickListener(new View.OnClickListener() {
-			public void onClick(View v) {
-				layoutPopupMenu.show();
-			}
-		});
-
-		topBar.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+		backgroundLayout.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
 				public WindowInsets onApplyWindowInsets(View v, WindowInsets windowInsets)
 				{
 					applyInsets(windowInsets);
-					return WindowInsets.CONSUMED;
+					return windowInsets;
 				}
 		});
 
@@ -423,7 +550,45 @@ public class DocumentActivity extends Activity
 			}
 		}
 
-		pageLabel.setText(pageNumber + " / " + pageCount);
+		if (uiController != null) {
+			uiController.updateProgress(pageNumber, pageCount);
+		} else {
+			pageLabel.setText(pageNumber + " / " + pageCount);
+		}
+	}
+
+	protected int readBackgroundMode() {
+		try {
+			return (int) getSharedPreferences("library_prefs", MODE_PRIVATE).getFloat("background_mode", 0f);
+		} catch (Throwable t) {
+			return 0;
+		}
+	}
+
+	private void applyReaderTheme() {
+		switch (readBackgroundMode()) {
+			case 1:
+				setTheme(R.style.Theme_MuPdfReader_Cream);
+				break;
+			case 2:
+				setTheme(R.style.Theme_MuPdfReader_Dark);
+				break;
+			default:
+				setTheme(R.style.Theme_MuPdfReader);
+				break;
+		}
+	}
+
+	private int readFontChoice() {
+		try {
+			int fromIntent = getIntent().getIntExtra("font_choice", -1);
+			if (fromIntent >= 0) {
+				return fromIntent;
+			}
+			return (int) getSharedPreferences("library_prefs", MODE_PRIVATE).getFloat("font_choice", 0f);
+		} catch (Throwable t) {
+			return 0;
+		}
 	}
 
 	protected void applyInsets(WindowInsets windowInsets) {
@@ -432,8 +597,24 @@ public class DocumentActivity extends Activity
 		systemInsets = Insets.max(systemInsets, systemBarInsets);
 		Insets cutoutInsets = windowInsets.getInsets(WindowInsets.Type.displayCutout());
 		systemInsets = Insets.max(systemInsets, cutoutInsets);
-		topBar.setPadding(0, systemInsets.top, 0, 0);
-		bottomBar.setPadding(0, 0, 0, systemInsets.bottom);
+
+
+		if (bottomBar != null) {
+			bottomBar.setPadding(
+				bottomBarPaddingLeft,
+				bottomBarPaddingTop,
+				bottomBarPaddingRight,
+				bottomBarPaddingBottom + systemInsets.bottom
+			);
+		}
+		if (immersiveFooter != null) {
+			immersiveFooter.setPadding(
+				immersiveFooterPaddingLeft,
+				immersiveFooterPaddingTop,
+				immersiveFooterPaddingRight,
+				immersiveFooterPaddingBottom + systemInsets.bottom
+			);
+		}
 	}
 
 	public boolean onKeyUp(int keyCode, KeyEvent event) {
@@ -556,6 +737,11 @@ public class DocumentActivity extends Activity
 			editor.putInt(key, currentPage);
 			editor.apply();
 		}
+	}
+
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
 	}
 
 	public void onBackPressed() {
@@ -684,9 +870,7 @@ public class DocumentActivity extends Activity
 				if (currentPage < 0 || currentPage >= pageCount)
 					currentPage = 0;
 				titleLabel.setText(title);
-				if (isReflowable)
-					layoutButton.setVisibility(View.VISIBLE);
-				else
+				if (!isReflowable)
 					zoomButton.setVisibility(View.VISIBLE);
 				loadPage();
 				loadOutline();
@@ -751,12 +935,27 @@ public class DocumentActivity extends Activity
 				}
 			}
 			public void run() {
-				if (flatOutline != null)
-					outlineButton.setVisibility(View.VISIBLE);
+				if (tocButton != null) {
+					tocButton.setVisibility(flatOutline != null ? View.VISIBLE : View.GONE);
+				}
 				if (outlineTruncated)
 					Toast.makeText(DocumentActivity.this, getString(R.string.toast_outline_too_large), Toast.LENGTH_SHORT).show();
 			}
 		});
+	}
+
+	private void openOutlinePanel() {
+		if (flatOutline == null || flatOutline.isEmpty()) {
+			onTocRequested();
+			return;
+		}
+
+		Intent intent = new Intent(DocumentActivity.this, OutlineActivity.class);
+		Bundle bundle = new Bundle();
+		bundle.putInt("POSITION", currentPage);
+		bundle.putSerializable("OUTLINE", flatOutline);
+		intent.putExtras(bundle);
+		startActivityForResult(intent, NAVIGATE_REQUEST);
 	}
 
 	protected void loadPage() {
@@ -842,21 +1041,71 @@ public class DocumentActivity extends Activity
 	public void toggleUI() {
 		toggledUI = true;
 		if (bottomBar.getVisibility() == View.VISIBLE) {
-			topBar.setVisibility(View.GONE);
-			currentBar.setVisibility(View.GONE);
-			bottomBar.setVisibility(View.GONE);
+			if (uiController != null) {
+				uiController.setBarsVisible(false, currentBar, true);
+			} else {
+				topBar.setVisibility(View.GONE);
+				currentBar.setVisibility(View.GONE);
+				bottomBar.setVisibility(View.GONE);
+				if (immersiveFooter != null)
+					immersiveFooter.setVisibility(View.VISIBLE);
+			}
+			onReaderUiVisibilityChanged(false);
 			if (currentBar == searchBar)
 				hideKeyboard();
 		} else {
-			topBar.setVisibility(View.VISIBLE);
-			currentBar.setVisibility(View.VISIBLE);
-			bottomBar.setVisibility(View.VISIBLE);
+			if (uiController != null) {
+				uiController.setBarsVisible(true, currentBar, true);
+			} else {
+				topBar.setVisibility(View.VISIBLE);
+				currentBar.setVisibility(View.VISIBLE);
+				bottomBar.setVisibility(View.VISIBLE);
+				if (immersiveFooter != null)
+					immersiveFooter.setVisibility(View.GONE);
+			}
+			onReaderUiVisibilityChanged(true);
 			showPageNumber(currentPage + 1);
 			if (currentBar == searchBar) {
 				searchBar.requestFocus();
 				showKeyboard();
 			}
 		}
+	}
+
+	/**
+	 * Lightweight integration hook for host-specific behavior.
+	 * Override in custom builds if UI visibility events must be forwarded.
+	 */
+	protected void onReaderUiVisibilityChanged(boolean visible) {
+		// no-op by default
+	}
+
+	/**
+	 * Host integration hook for reader settings action.
+	 */
+	protected void onReaderSettingsRequested() {
+		// no-op by default
+	}
+
+	/**
+	 * Host integration hook for bookmark toggle action.
+	 */
+	protected void onBookmarkToggleRequested() {
+		// no-op by default
+	}
+
+	/**
+	 * Host integration hook when TOC action is requested but no outline is available.
+	 */
+	protected void onTocRequested() {
+		// no-op by default
+	}
+
+	/**
+	 * Host integration hook for bookmarks list action.
+	 */
+	protected void onBookmarksRequested() {
+		// no-op by default
 	}
 
 	public void goBackward() {

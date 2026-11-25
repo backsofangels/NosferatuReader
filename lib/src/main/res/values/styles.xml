@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MuPdfReader" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="readerBackgroundColor">@color/mupdf_reader_bg_light</item>
+        <item name="readerChromeBackgroundColor">@color/mupdf_reader_bg_light</item>
+        <item name="readerTextColor">@color/mupdf_reader_text_light</item>
+        <item name="readerProgressBackgroundColor">@color/mupdf_reader_progress_light</item>
+    </style>
+
+    <style name="Theme.MuPdfReader.Cream" parent="Theme.MuPdfReader">
+        <item name="readerBackgroundColor">@color/mupdf_reader_bg_root_cream</item>
+        <item name="readerChromeBackgroundColor">@color/mupdf_reader_bg_cream</item>
+        <item name="readerTextColor">@color/mupdf_reader_text_cream</item>
+        <item name="readerProgressBackgroundColor">@color/mupdf_reader_progress_cream</item>
+    </style>
+
+    <style name="Theme.MuPdfReader.Dark" parent="Theme.MuPdfReader">
+        <item name="readerBackgroundColor">@color/mupdf_reader_bg_dark</item>
+        <item name="readerChromeBackgroundColor">@color/mupdf_reader_bg_dark</item>
+        <item name="readerTextColor">@color/mupdf_reader_text_dark</item>
+        <item name="readerProgressBackgroundColor">@color/mupdf_reader_progress_dark</item>
+    </style>
+</resources>
+
+

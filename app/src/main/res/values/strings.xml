@@ -64,6 +64,8 @@
     <string name="no_bookmarks">Nessun segnalibro</string>
     <string name="open_bookmark">Apri</string>
     <string name="remove_bookmark">Rimuovi</string>
+    <string name="reader_bookmark_page_label">Pagina %1$d</string>
+    <string name="reader_settings_font_title">Carattere</string>
     <string name="toc_title">Indice</string>
     <string name="toc_navigation_failed">Impossibile navigare al capitolo selezionato</string>
 </resources>

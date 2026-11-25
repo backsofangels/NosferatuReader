@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared spacing tokens for MuPDF reader UI alignment -->
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">12dp</dimen>
+    <dimen name="spacing_16">16dp</dimen>
+
+    <!-- Reader sizing tokens -->
+    <dimen name="reader_icon_size">48dp</dimen>
+    <dimen name="reader_icon_padding">12dp</dimen>
+    <dimen name="reader_bar_height">48dp</dimen>
+    <dimen name="reader_title_margin_horizontal">12dp</dimen>
+    <dimen name="reader_text_size_md">16sp</dimen>
+    <dimen name="reader_text_size_sm">12sp</dimen>
+    <dimen name="reader_label_padding">8dp</dimen>
+    <dimen name="reader_progress_height">3dp</dimen>
+    <dimen name="reader_menu_seek_margin_top">16dp</dimen>
+    <dimen name="reader_menu_seek_margin_horizontal">16dp</dimen>
+    <dimen name="reader_menu_title_margin_horizontal">16dp</dimen>
+    <dimen name="reader_bottom_padding">20dp</dimen>
+</resources>

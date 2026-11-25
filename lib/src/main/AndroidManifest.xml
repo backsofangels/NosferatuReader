@@ -6,6 +6,7 @@
 				android:label="MuPDF mini"
 				android:configChanges="orientation|screenSize|keyboardHidden"
 				android:hardwareAccelerated="false"
+				android:theme="@style/Theme.MuPdfReader"
 				android:exported="true"
 				>
 			<intent-filter>
