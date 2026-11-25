@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Themeable attributes for MuPDF reader. Host app may supply these in its theme. -->
+    <attr name="readerBackgroundColor" format="color" />
+    <attr name="readerChromeBackgroundColor" format="color" />
+    <attr name="readerTextColor" format="color" />
+    <attr name="readerProgressBackgroundColor" format="color" />
+</resources>

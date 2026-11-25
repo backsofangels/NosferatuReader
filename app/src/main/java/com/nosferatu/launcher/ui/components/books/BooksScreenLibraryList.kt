@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.dimensionResource
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryFilterTab
 import com.nosferatu.launcher.ui.states.LibraryUiState
@@ -113,15 +114,15 @@ private fun ListDivider() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(0.5.dp)
-            .padding(horizontal = 16.dp)
+            .height(dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_thin))
+            .padding(horizontal = dimensionResource(id = com.nosferatu.launcher.R.dimen.spacing_16))
     ) {
         HorizontalDivider(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
-                .align(Alignment.Center)
-                .background(Color.Black),
-            thickness = 0.5.dp
+                .align(Alignment.Center),
+            thickness = dimensionResource(id = com.nosferatu.launcher.R.dimen.divider_thin),
+            color = LocalAppColors.current.divider
         )
     }
 }

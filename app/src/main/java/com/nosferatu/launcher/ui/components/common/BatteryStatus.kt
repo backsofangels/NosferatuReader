@@ -6,7 +6,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.nosferatu.launcher.ui.LocalAppColors
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,36 +35,43 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BatteryStatus() {
     val context = LocalContext.current
-    var batteryLevel by remember { mutableIntStateOf(0) }
+    var batteryPercent by remember { mutableIntStateOf(-1) }
 
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                batteryLevel = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                batteryPercent = if (level >= 0 && scale > 0) (level * 100) / scale else -1
             }
         }
         context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    Row(verticalAlignment = Alignment.Companion.CenterVertically) {
+    val colors = LocalAppColors.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val displayText = if (batteryPercent >= 0) "$batteryPercent%" else "--%"
         Text(
-            text = "$batteryLevel%",
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Companion.Bold),
-            modifier = Modifier.Companion.padding(end = 4.dp)
+            text = displayText,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+            color = colors.onBg,
+            modifier = Modifier.padding(end = 4.dp)
         )
+
         Box(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .width(18.dp)
                 .height(10.dp)
-                .border(1.dp, Color.Companion.Black)
+                .border(BorderStroke(1.dp, colors.onBg.copy(alpha = 0.6f)), shape = RoundedCornerShape(2.dp))
                 .padding(1.dp)
         ) {
+            val fraction = if (batteryPercent >= 0) (batteryPercent.coerceIn(0,100) / 100f) else 0f
             Box(
-                modifier = Modifier.Companion
-                    .fillMaxWidth(batteryLevel / 100f)
+                modifier = Modifier
+                    .fillMaxWidth(fraction)
                     .fillMaxHeight()
-                    .background(Color.Companion.Black)
+                    .background(colors.onBg)
             )
         }
     }

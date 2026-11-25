@@ -20,6 +20,7 @@ class LibraryConfig(private val context: Context) {
         private const val KEY_ROOT_PATH = "root_path"
         private const val KEY_BACKGROUND_MODE = "background_mode"
         private const val KEY_FONT_SIZE = "font_size_scale"
+        private const val KEY_FONT_CHOICE = "font_choice"
         private const val KEY_FORCE_BOLD = "force_bold"
         private const val KEY_VOLUME_KEYS = "volume_keys"
         private const val KEY_INVERT_TOUCHES = "invert_touches"
@@ -32,7 +33,9 @@ class LibraryConfig(private val context: Context) {
                 // Fallback to user home on non-Android environments (tests)
                 System.getProperty("user.home") ?: "/"
             }
-        private const val DEFAULT_FONT_SIZE = 1.1f
+        // 🔴 OPTIMIZATION: Reduced from 1.1f to 0.85f for low-memory devices
+        // Smaller font = smaller rendering viewport = fewer tiles = less memory
+        private const val DEFAULT_FONT_SIZE = 0.85f
         private const val DEFAULT_BACKGROUND_MODE = 0.0f // 0 = bianco, 1 = panna, 2 = nero
     }
 
@@ -57,6 +60,16 @@ class LibraryConfig(private val context: Context) {
         prefs.getFloat(KEY_FONT_SIZE, DEFAULT_FONT_SIZE)
     )
         private set
+
+    var fontChoice by mutableFloatStateOf(
+        prefs.getFloat(KEY_FONT_CHOICE, 0.0f)
+    )
+        private set
+
+    fun updateFontChoice(newValue: Float) {
+        fontChoice = newValue
+        prefs.edit().putFloat(KEY_FONT_CHOICE, newValue).apply()
+    }
 
     fun updateFontSize(newValue: Float) {
         fontSizeScale = newValue

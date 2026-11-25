@@ -91,7 +91,8 @@ fun SliderRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(36.dp), // Altezza identica a ControlTextButton
+                    .height(36.dp)
+                    .background(LocalAppColors.current.bg), // evita che colori Material3 interni traspariscano
                 contentAlignment = Alignment.Center
             ) {
                 Slider(
@@ -114,7 +115,7 @@ fun SliderRow(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(1.dp)
-                                .background(Color.LightGray.copy(alpha = 0.3f)),
+                                .background(LocalAppColors.current.progressTrack.copy(alpha = 0.3f)),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             val fraction = (sliderState.value - minValue) / (maxValue - minValue)

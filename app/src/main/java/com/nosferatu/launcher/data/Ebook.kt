@@ -16,7 +16,8 @@ data class Ebook(
             format = this.format.name,
             coverPath = coverPath,
             lastLocationJson = null,
-            progression = 0.0
+            progression = 0.0,
+            tocImported = false
         )
     }
 }

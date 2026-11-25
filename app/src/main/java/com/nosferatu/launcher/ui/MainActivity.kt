@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -36,7 +41,7 @@ import com.nosferatu.launcher.NosferatuApp
 import com.nosferatu.launcher.data.EbookEntity
 import com.nosferatu.launcher.library.LibraryViewModel
 import com.nosferatu.launcher.library.LibraryViewModelFactory
-import com.nosferatu.launcher.reader.ReaderActivity
+import java.io.File
 import com.nosferatu.launcher.ui.components.books.BooksFilterBar
 import com.nosferatu.launcher.ui.components.books.BooksScreenLibraryList
 import com.nosferatu.launcher.ui.components.common.BottomBar
@@ -75,19 +80,54 @@ class MainActivity: AppCompatActivity() {
                 checkAndRequestPermissions()
             }
 
+            val appColors = appColorsFor(libraryConfig.backgroundMode)
             val isDark = libraryConfig.backgroundMode.toInt() == 2
             val colorScheme = if (isDark) {
                 darkColorScheme().copy(
-                    background = Color(0xFF222222),
-                    surface = Color(0xFF222222),
-                    onBackground = Color(0xFFEEEEEE),
-                    onSurface = Color(0xFFEEEEEE)
+                    background = appColors.bg,
+                    surface = appColors.surface,
+                    onBackground = appColors.onBg,
+                    onSurface = appColors.onBg
                 )
             } else {
-                lightColorScheme(surface = Color.White)
+                lightColorScheme(
+                    background = appColors.bg,
+                    surface = appColors.surface,
+                    onBackground = appColors.onBg,
+                    onSurface = appColors.onBg
+                )
             }
-            val appColors = appColorsFor(libraryConfig.backgroundMode)
-            MaterialTheme(colorScheme = colorScheme) {
+            // Build typography dynamically based on libraryConfig.fontChoice
+            val baseTypography = Typography()
+            val chosenFontFamily = run {
+                // Try to resolve font resource named "literata_regular" in res/font at runtime
+                val ctx = this@MainActivity
+                val resId = ctx.resources.getIdentifier("literata_regular", "font", ctx.packageName)
+                if (resId != 0) FontFamily(Font(resId)) else FontFamily.Default
+            }
+
+            val typography = if (libraryConfig.fontChoice.toInt() == 1) {
+                // copy base typography replacing fontFamily on common styles
+                baseTypography.copy(
+                    displayLarge = baseTypography.displayLarge.copy(fontFamily = chosenFontFamily),
+                    displayMedium = baseTypography.displayMedium.copy(fontFamily = chosenFontFamily),
+                    displaySmall = baseTypography.displaySmall.copy(fontFamily = chosenFontFamily),
+                    headlineLarge = baseTypography.headlineLarge.copy(fontFamily = chosenFontFamily),
+                    headlineMedium = baseTypography.headlineMedium.copy(fontFamily = chosenFontFamily),
+                    headlineSmall = baseTypography.headlineSmall.copy(fontFamily = chosenFontFamily),
+                    titleLarge = baseTypography.titleLarge.copy(fontFamily = chosenFontFamily),
+                    titleMedium = baseTypography.titleMedium.copy(fontFamily = chosenFontFamily),
+                    titleSmall = baseTypography.titleSmall.copy(fontFamily = chosenFontFamily),
+                    bodyLarge = baseTypography.bodyLarge.copy(fontFamily = chosenFontFamily),
+                    bodyMedium = baseTypography.bodyMedium.copy(fontFamily = chosenFontFamily),
+                    bodySmall = baseTypography.bodySmall.copy(fontFamily = chosenFontFamily),
+                    labelLarge = baseTypography.labelLarge.copy(fontFamily = chosenFontFamily),
+                    labelMedium = baseTypography.labelMedium.copy(fontFamily = chosenFontFamily),
+                    labelSmall = baseTypography.labelSmall.copy(fontFamily = chosenFontFamily)
+                )
+            } else baseTypography
+
+            MaterialTheme(colorScheme = colorScheme, typography = typography) {
                 CompositionLocalProvider(LocalAppColors provides appColors) {
                     Scaffold(
                         modifier = Modifier
@@ -191,9 +231,17 @@ class MainActivity: AppCompatActivity() {
     }
 
     private fun openBook(book: EbookEntity) {
-        val intent = Intent(this, ReaderActivity::class.java).apply {
-            putExtra("BOOK_PATH", book.filePath)
-            putExtra("LAST_LOCATION_JSON", book.lastLocationJson)
+        // MuPDF DocumentActivity expects the document URI as intent data and an
+        // optional ReturnToLibraryActivity extra. Construct a file:// URI for the
+        // book path and pass the package-scoped ReturnToLibraryActivity flag so
+        // the DocumentActivity can return to the library when finished.
+        val fileUri = File(book.filePath).toUri()
+        Log.d(_tag, "Opening book: ${book.title}, fileUri: $fileUri")
+        val intent = Intent(this, com.nosferatu.launcher.reader.NosferatuDocumentActivity::class.java).apply {
+            data = fileUri
+            // Use the package-scoped key that DocumentActivity reads
+            putExtra("${packageName}.ReturnToLibraryActivity", 1)
+            // Pass the book ID for position saving
             putExtra("BOOK_ID", book.id)
             addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
         }

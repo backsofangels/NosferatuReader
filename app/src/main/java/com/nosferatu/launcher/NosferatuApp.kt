@@ -18,12 +18,14 @@
 package com.nosferatu.launcher
 
 import android.app.Application
+import android.webkit.WebView
 import com.nosferatu.launcher.data.EbookFormat
 import com.nosferatu.launcher.data.database.AppDatabase
 import com.nosferatu.launcher.library.*
 import com.nosferatu.launcher.parser.BookParser
 import com.nosferatu.launcher.parser.EpubParser
 import com.nosferatu.launcher.repository.LibraryRepository
+import org.readium.r2.navigator.BuildConfig
 
 
 class NosferatuApp : Application() {
@@ -48,7 +50,13 @@ class NosferatuApp : Application() {
             bookDao = database.bookDao(),
             scanner = scanner,
             coverManager = coverManager,
-            libraryConfig = libraryConfig
+            libraryConfig = libraryConfig,
+            tocDao = database.tocDao()
         )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        WebView.setWebContentsDebuggingEnabled(true)
     }
 }
